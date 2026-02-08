@@ -2,8 +2,7 @@ mod config;
 mod proxy;
 
 use config::Config;
-use hyper_tls::HttpsConnector;
-use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
 use http_body_util::Full;
@@ -12,7 +11,7 @@ use axum::Router;
 use tower_http::trace::TraceLayer;
 
 /// 프록시 HTTP 클라이언트 타입
-pub type HttpClient = Client<HttpsConnector<HttpConnector>, Full<Bytes>>;
+pub type HttpClient = Client<hyper_rustls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>;
 
 /// 애플리케이션 상태 (axum에서 공유)
 #[derive(Clone)]
@@ -38,8 +37,13 @@ async fn main() {
     let config = Config::load(config_path).expect("설정 파일 로드 실패");
     tracing::info!(host = %config.server.host, port = config.server.port, "설정 로드 완료");
 
-    // 4. HTTPS 클라이언트 구축
-    let https = HttpsConnector::new();
+    // 4. HTTPS 클라이언트 구축 (rustls — 순수 Rust TLS, 시스템 OpenSSL 불필요)
+    let https = HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .expect("시스템 루트 인증서 로드 실패")
+        .https_or_http()
+        .enable_all_versions()
+        .build();
     let client: HttpClient = Client::builder(TokioExecutor::new()).build(https);
 
     // 5. AppState 생성 및 바인딩 주소 추출

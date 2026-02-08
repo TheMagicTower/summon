@@ -1,0 +1,15 @@
+# Changelog
+
+## [v0.1.0] - 2026-02-08
+
+### 추가
+- 프로젝트 초기 릴리즈
+- `config.yaml` 기반 설정 시스템 (환경변수 `${VAR}` 치환 지원)
+- 모델명 부분 문자열 매칭 기반 라우팅
+- `/v1/messages` POST 요청의 `model` 필드 파싱
+- 라우팅 대상 모델: 지정된 업스트림으로 인증 헤더 교체 후 포워딩
+- 비대상 모델 및 기타 요청: Anthropic API로 패스스루
+- SSE 스트리밍 지원 (버퍼링 없이 청크 단위 전달)
+- `--config` CLI 인자 (기본값: `config.yaml`)
+- 단위 테스트 7개 (환경변수 치환, YAML 파싱, 라우트 매칭)
+- GitHub Actions 릴리즈 CI/CD (Linux amd64/arm64, macOS amd64/arm64)
