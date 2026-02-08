@@ -1,0 +1,23 @@
+server:
+  host: "127.0.0.1"
+  port: 8080
+
+# 기본 업스트림 (라우팅 비대상 모델 + 모든 비-메시지 요청)
+default:
+  url: "https://api.anthropic.com"
+
+# 모델별 라우팅 규칙
+routes:
+  - match: "claude-haiku"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${Z_AI_API_KEY}"
+
+  - match: "claude-sonnet"
+    upstream:
+      url: "https://api.kimi.ai/v1"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${KIMI_API_KEY}"
