@@ -130,6 +130,158 @@ ANTHROPIC_BASE_URL=http://$(wsl hostname -I | awk '{print $1}'):18081 claude
 
 또는 `config.yaml`에서 `server.host`를 `"0.0.0.0"`으로 설정하여 Windows에서 접근할 수 있습니다.
 
+## 백그라운드 서비스로 등록
+
+### macOS (launchd)
+
+**1. LaunchAgent plist 파일 생성:**
+
+```bash
+cat > ~/Library/LaunchAgents/com.themagictower.summon.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.themagictower.summon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/YOUR_USERNAME/.local/bin/summon</string>
+        <string>--config</string>
+        <string>/Users/YOUR_USERNAME/.config/summon/config.yaml</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USERNAME/.local/share/summon/summon.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/.local/share/summon/summon.error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/YOUR_USERNAME/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
+EOF
+```
+
+**2. 로그 디렉토리 생성 및 서비스 등록:**
+
+```bash
+mkdir -p ~/.local/share/summon
+launchctl load ~/Library/LaunchAgents/com.themagictower.summon.plist
+launchctl start com.themagictower.summon
+```
+
+**3. 서비스 관리:**
+
+```bash
+# 상태 확인
+launchctl list | grep com.themagictower.summon
+
+# 중지
+launchctl stop com.themagictower.summon
+
+# 재시작
+launchctl stop com.themagictower.summon && launchctl start com.themagictower.summon
+
+# 제거
+launchctl unload ~/Library/LaunchAgents/com.themagictower.summon.plist
+rm ~/Library/LaunchAgents/com.themagictower.summon.plist
+```
+
+### Windows (Windows Service)
+
+**PowerShell (관리자 권한 필요):**
+
+```powershell
+# 1. summon을 Windows Service로 등록 (nssm 사용 권장)
+# nssm 설치: winget install nssm
+
+# 서비스 등록
+nssm install Summon "$env:LOCALAPPDATA\summon\bin\summon.exe"
+nssm set Summon AppParameters "--config `"$env:APPDATA\summon\config.yaml`""
+nssm set Summon DisplayName "Summon LLM Proxy"
+nssm set Summon Start SERVICE_AUTO_START
+
+# 서비스 시작
+Start-Service Summon
+
+# 서비스 관리
+Get-Service Summon      # 상태 확인
+Stop-Service Summon     # 중지
+Restart-Service Summon  # 재시작
+sc delete Summon        # 제거
+```
+
+**또는 WinSW 사용:**
+
+```powershell
+# WinSW 다운로드 및 설정
+# https://github.com/winsw/winsw/releases
+
+# summon-service.xml 생성:
+@"
+<service>
+  <id>summon</id>
+  <name>Summon LLM Proxy</name>
+  <description>Model-based routing proxy for Claude Code</description>
+  <executable>%LOCALAPPDATA%\summon\bin\summon.exe</executable>
+  <arguments>--config "%APPDATA%\summon\config.yaml"</arguments>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>
+"@ | Out-File "$env:LOCALAPPDATA\summon\bin\summon-service.xml" -Encoding UTF8
+
+# 서비스 등록 및 시작
+winsw install $env:LOCALAPPDATA\summon\bin\summon-service.xml
+winsw start $env:LOCALAPPDATA\summon\bin\summon-service.xml
+```
+
+### Linux (systemd) - WSL 포함
+
+**1. systemd 서비스 파일 생성:**
+
+```bash
+cat > ~/.config/systemd/user/summon.service << 'EOF'
+[Unit]
+Description=Summon LLM Proxy
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/summon --config %h/.config/summon/config.yaml
+Restart=always
+RestartSec=5
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=default.target
+EOF
+```
+
+**2. 서비스 등록 및 시작:**
+
+```bash
+# 사용자 서비스 로드
+systemctl --user daemon-reload
+systemctl --user enable summon.service
+systemctl --user start summon.service
+
+# 서비스 관리
+systemctl --user status summon    # 상태 확인
+systemctl --user stop summon      # 중지
+systemctl --user restart summon   # 재시작
+systemctl --user disable summon   # 자동 시작 비활성화
+```
+
+> **참고**: WSL2에서 systemd를 사용하려면 `/etc/wsl.conf`에 `[boot] systemd=true` 설정이 필요할 수 있습니다.
+
 ## 주요 기능
 
 - **투명한 프록시**: Claude Code 입장에서 프록시의 존재를 인식하지 못함

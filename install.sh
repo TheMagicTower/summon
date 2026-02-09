@@ -42,6 +42,113 @@ get_wsl_host_ip() {
     ip route show default | grep -oP '(?<=via )\d+\.\d+\.\d+\.\d+' || echo "127.0.0.1"
 }
 
+# Detect OS type for service installation
+detect_os_type() {
+    local os
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    case "$os" in
+        darwin) echo "macos" ;;
+        linux) echo "linux" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+# Install macOS LaunchAgent
+install_macos_service() {
+    local config_file="$1"
+    local plist_path="$HOME/Library/LaunchAgents/com.themagictower.summon.plist"
+    local log_dir="$HOME/.local/share/summon"
+
+    echo ""
+    echo "🍎 macOS LaunchAgent 설치 중..."
+
+    mkdir -p "$log_dir"
+
+    cat > "$plist_path" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.themagictower.summon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$HOME/.local/bin/summon</string>
+        <string>--config</string>
+        <string>$config_file</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>$log_dir/summon.log</string>
+    <key>StandardErrorPath</key>
+    <string>$log_dir/summon.error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
+EOF
+
+    launchctl load "$plist_path" 2>/dev/null || true
+    launchctl start com.themagictower.summon 2>/dev/null || true
+
+    echo "   ✅ LaunchAgent 등록 완료: $plist_path"
+    echo "   📋 관리 명령어:"
+    echo "      launchctl stop com.themagictower.summon    # 중지"
+    echo "      launchctl start com.themagictower.summon   # 시작"
+    echo "      launchctl list | grep summon               # 상태 확인"
+}
+
+# Install Linux/WSL systemd user service
+install_linux_service() {
+    local config_file="$1"
+    local service_dir="$HOME/.config/systemd/user"
+    local service_path="$service_dir/summon.service"
+
+    echo ""
+    echo "🐧 systemd 사용자 서비스 설치 중..."
+
+    mkdir -p "$service_dir"
+
+    cat > "$service_path" << EOF
+[Unit]
+Description=Summon LLM Proxy
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=$HOME/.local/bin/summon --config $config_file
+Restart=always
+RestartSec=5
+Environment="PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=default.target
+EOF
+
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable summon.service 2>/dev/null || true
+    systemctl --user start summon.service 2>/dev/null || true
+
+    echo "   ✅ systemd 서비스 등록 완료: $service_path"
+    echo "   📋 관리 명령어:"
+    echo "      systemctl --user stop summon      # 중지"
+    echo "      systemctl --user start summon     # 시작"
+    echo "      systemctl --user status summon    # 상태 확인"
+
+    if is_wsl; then
+        echo ""
+        echo "   💡 WSL에서 systemd를 사용하려면 /etc/wsl.conf에 다음 설정이 필요할 수 있습니다:"
+        echo "      [boot]"
+        echo "      systemd=true"
+    fi
+}
+
 # Get latest release version
 get_latest_version() {
     curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4
@@ -133,6 +240,27 @@ EOF
     else
         echo "   Claude Code 연동:"
         echo "   ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude"
+    fi
+
+    # Service installation prompt
+    echo ""
+    echo "🔧 백그라운드 서비스로 등록하시겠습니까?"
+    echo "   이 설정은 부팅 시 자동으로 summon을 시작하고, 종료 시 자동으로 재시작합니다."
+    read -rp "   서비스로 등록하시겠습니까? (y/N): " INSTALL_SERVICE
+
+    if [[ "$INSTALL_SERVICE" =~ ^[Yy]$ ]]; then
+        OS_TYPE=$(detect_os_type)
+        case "$OS_TYPE" in
+            macos)
+                install_macos_service "$CONFIG_FILE"
+                ;;
+            linux)
+                install_linux_service "$CONFIG_FILE"
+                ;;
+            *)
+                echo "   ⚠️  지원되지 않는 OS입니다. 수동으로 서비스를 등록해주세요."
+                ;;
+        esac
     fi
 }
 
