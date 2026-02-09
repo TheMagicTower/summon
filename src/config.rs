@@ -1,40 +1,50 @@
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 
 /// 서버 바인딩 설정
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
 }
 
 /// 기본 업스트림 (Anthropic API)
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DefaultConfig {
     pub url: String,
 }
 
 /// 인증 헤더 설정
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AuthConfig {
     /// 인증 타입: "api_key" (기본) 또는 "oauth" (향후 v0.3+)
-    #[serde(rename = "type", default = "default_auth_type")]
+    #[serde(rename = "type", default = "default_auth_type", skip_serializing_if = "is_default_auth_type")]
     pub auth_type: String,
 
     // API Key 방식
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub header: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
 
     // OAuth 방식 (v0.3+ — 현재는 파싱만)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub client_secret: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_url: Option<String>,
 }
 
 fn default_auth_type() -> String {
     "api_key".to_string()
+}
+
+fn is_default_auth_type(s: &String) -> bool {
+    s == "api_key"
 }
 
 impl AuthConfig {
@@ -49,27 +59,29 @@ impl AuthConfig {
 }
 
 /// 업스트림 제공자 설정
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UpstreamConfig {
     pub url: String,
     pub auth: AuthConfig,
 }
 
 /// 라우팅 규칙
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RouteConfig {
     /// 모델명 부분 문자열 매칭 패턴
     #[serde(rename = "match")]
     pub match_pattern: String,
     pub upstream: UpstreamConfig,
     /// 트랜스포머 이름: "openai", "gemini" 등 (None이면 패스스루)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub transformer: Option<String>,
     /// 업스트림 모델명 (원본 모델명을 이 값으로 교체)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model_map: Option<String>,
 }
 
 /// 최상위 설정
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     pub server: ServerConfig,
     pub default: DefaultConfig,
@@ -92,6 +104,27 @@ impl Config {
         let resolved = resolve_env(&raw);
         let config: Config = serde_yaml::from_str(&resolved)?;
         Ok(config)
+    }
+
+    /// 기본 설정 생성 (config.yaml이 없을 때)
+    pub fn default_config() -> Self {
+        Config {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 18081,
+            },
+            default: DefaultConfig {
+                url: "https://api.anthropic.com".into(),
+            },
+            routes: vec![],
+        }
+    }
+
+    /// YAML 파일로 설정 저장
+    pub fn save(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let yaml = serde_yaml::to_string(self)?;
+        fs::write(path, yaml)?;
+        Ok(())
     }
 
     /// 모델명으로 라우트 검색 (첫 번째 매칭 반환)
@@ -129,7 +162,7 @@ mod tests {
         let yaml = r#"
 server:
   host: "127.0.0.1"
-  port: 8080
+  port: 18081
 default:
   url: "https://api.anthropic.com"
 routes:
@@ -145,7 +178,7 @@ routes:
 
         let config = Config::load(path).expect("설정 로드 실패");
         assert_eq!(config.server.host, "127.0.0.1");
-        assert_eq!(config.server.port, 8080);
+        assert_eq!(config.server.port, 18081);
         assert_eq!(config.default.url, "https://api.anthropic.com");
         assert_eq!(config.routes.len(), 1);
         assert_eq!(config.routes[0].match_pattern, "zai");
@@ -165,7 +198,7 @@ routes:
         let yaml = r#"
 server:
   host: "127.0.0.1"
-  port: 8080
+  port: 18081
 default:
   url: "https://api.anthropic.com"
 routes:
@@ -233,7 +266,7 @@ routes:
         let config = Config {
             server: ServerConfig {
                 host: "127.0.0.1".into(),
-                port: 8080,
+                port: 18081,
             },
             default: DefaultConfig {
                 url: "https://api.anthropic.com".into(),
@@ -284,7 +317,7 @@ routes:
         Config {
             server: ServerConfig {
                 host: "127.0.0.1".into(),
-                port: 8080,
+                port: 18081,
             },
             default: DefaultConfig {
                 url: "https://api.anthropic.com".into(),

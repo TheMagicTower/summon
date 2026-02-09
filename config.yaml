@@ -1,6 +1,6 @@
 server:
   host: "127.0.0.1"
-  port: 8080
+  port: 18081
 
 # 기본 업스트림 (라우팅 비대상 모델 + 모든 비-메시지 요청)
 default:
@@ -8,16 +8,16 @@ default:
 
 # 모델별 라우팅 규칙
 routes:
-  - match: "claude-haiku"
+  - match: "glm"
     upstream:
       url: "https://api.z.ai/api/anthropic"
       auth:
         header: "x-api-key"
-        value: "${Z_AI_API_KEY}"
+        value: "f405af2b4ae343239483116cfa2abbd3.vfX1KguHa068yjp9"
 
-  - match: "claude-sonnet"
+  - match: "kimi"
     upstream:
-      url: "https://api.kimi.ai/v1"
+      url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
-        value: "Bearer ${KIMI_API_KEY}"
+        value: "Bearer sk-kimi-hZAweYFTn69nX7XdhKv1seuY9qlv9LaaM8x89Tv1EroJUyhJP4bC5ebyenozuc3y"
