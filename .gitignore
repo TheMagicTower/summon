@@ -1,3 +1,5 @@
 /target
 .env
 config.yaml
+firebase-debug.log
+memory-bank/
