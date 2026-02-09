@@ -1,0 +1,215 @@
+{
+  "nav": {
+    "home": "Home",
+    "installation": "Installation",
+    "configuration": "Configuration",
+    "usage": "Usage",
+    "providers": "Providers",
+    "service": "Service Registration",
+    "troubleshooting": "Troubleshooting"
+  },
+  "home": {
+    "title": "Summon",
+    "description": "A lightweight reverse proxy that routes Claude Code API requests to different LLM providers based on model names. Maintains Anthropic subscription (OAuth) authentication while branching specific models to external providers.",
+    "getStarted": "Get Started",
+    "architecture": "Architecture",
+    "quickStart": "Quick Start",
+    "install": "Install",
+    "run": "Run",
+    "features": "Features",
+    "feature": {
+      "routing": {
+        "title": "Model-Based Routing",
+        "desc": "Routes API requests to different providers based on the model field in /v1/messages POST requests."
+      },
+      "auth": {
+        "title": "Subscription Auth Preserved",
+        "desc": "Keeps Anthropic OAuth tokens intact for default requests, swaps auth only for routed models."
+      },
+      "streaming": {
+        "title": "SSE Streaming",
+        "desc": "Full support for Server-Sent Events streaming with zero-copy passthrough."
+      },
+      "transparent": {
+        "title": "Transparent Proxy",
+        "desc": "Claude Code cannot detect the proxy's presence. All non-message requests pass through unchanged."
+      }
+    }
+  },
+  "installation": {
+    "title": "Installation",
+    "description": "Install Summon on your system.",
+    "oneLine": {
+      "title": "One-Line Install (Recommended)",
+      "wslNote": "WSL uses the same Linux installer. You can use Claude Code from both inside WSL and Windows."
+    },
+    "binary": {
+      "title": "Binary Download",
+      "description": "Download pre-built binaries from the GitHub Releases page.",
+      "platform": "Platform",
+      "file": "File",
+      "example": "Example: macOS Apple Silicon"
+    },
+    "source": {
+      "title": "Build from Source",
+      "description": "Requires Rust toolchain (stable)."
+    }
+  },
+  "configuration": {
+    "title": "Configuration",
+    "description": "Configure Summon with a YAML config file.",
+    "location": {
+      "title": "Config File Location",
+      "description": "Summon searches for config files in the following order:",
+      "priority": "Priority",
+      "path": "Path",
+      "desc": "Description",
+      "explicit": "Explicit CLI argument",
+      "envVar": "Environment variable path",
+      "user": "Per-user config (XDG)",
+      "system": "System-wide config",
+      "cwd": "Current directory"
+    },
+    "structure": {
+      "title": "Config File Structure"
+    },
+    "fields": {
+      "title": "Field Reference",
+      "server": "Bind address and port. Use 127.0.0.1 for security (no external exposure).",
+      "default": "Default upstream URL for non-routed models and non-message requests (usually Anthropic API).",
+      "routes": "Array of routing rules evaluated top-to-bottom, first match wins.",
+      "match": "Substring match against the model field. If the model name contains this string, the route matches.",
+      "upstreamUrl": "Target URL for matched requests.",
+      "authHeader": "HTTP header name for authentication (e.g., x-api-key, Authorization).",
+      "authValue": "Authentication value. Supports ${VAR} environment variable references."
+    },
+    "env": {
+      "title": "Environment Variables",
+      "description": "API keys should be stored as environment variables, not directly in config files. Use ${VAR_NAME} syntax to reference them."
+    }
+  },
+  "usage": {
+    "title": "Usage",
+    "description": "How to run Summon and connect Claude Code.",
+    "basic": {
+      "title": "Basic Usage"
+    },
+    "claudeCode": {
+      "title": "Claude Code Integration",
+      "description": "Connect Claude Code to Summon by setting the ANTHROPIC_BASE_URL environment variable.",
+      "manual": "Manual connection",
+      "auto": {
+        "title": "Automatic Connection (settings.json)",
+        "description": "Add to Claude Code settings for automatic proxy connection on every launch."
+      }
+    },
+    "modelBinding": {
+      "title": "Model Binding",
+      "description": "Override Claude Code's default models to use external providers. The install script can configure this automatically."
+    },
+    "wsl": {
+      "title": "WSL Usage",
+      "description": "Summon works in WSL. You can use Claude Code from both inside WSL and from Windows.",
+      "inside": {
+        "title": "Inside WSL"
+      },
+      "outside": {
+        "title": "From Windows (connecting to WSL)"
+      }
+    }
+  },
+  "providers": {
+    "title": "Provider Guide",
+    "description": "Supported LLM providers and how to configure them.",
+    "kimi": {
+      "description": "Kimi provides an Anthropic-compatible API endpoint for coding tasks."
+    },
+    "zai": {
+      "description": "Z.AI (GLM) provides an Anthropic-compatible API endpoint."
+    },
+    "custom": {
+      "title": "Custom Provider",
+      "description": "Any Anthropic API-compatible provider can be added as a custom route.",
+      "note": {
+        "title": "Compatibility Note",
+        "description": "v0.1 only supports Anthropic API-compatible providers. Non-compatible providers will be supported in v0.2 via request/response transformers."
+      }
+    },
+    "routing": {
+      "title": "Routing Logic",
+      "description": "How model-based routing works:",
+      "rule1": "Only /v1/messages POST requests are inspected for the model field.",
+      "rule2": "Routes are evaluated top-to-bottom; the first match wins.",
+      "rule3": "match performs substring matching on the model name.",
+      "rule4": "Unmatched models are forwarded to the default upstream (Anthropic API)."
+    }
+  },
+  "service": {
+    "title": "Service Registration",
+    "description": "Register Summon as a background service that starts automatically.",
+    "macos": {
+      "title": "macOS LaunchAgent",
+      "step1": "1. Create plist file",
+      "step2": "2. Load and start",
+      "manage": "Management Commands"
+    },
+    "linux": {
+      "title": "Linux systemd User Service",
+      "step1": "1. Create service file",
+      "step2": "2. Enable and start",
+      "manage": "Management Commands",
+      "wslNote": "WSL2: systemd requires [boot] systemd=true in /etc/wsl.conf."
+    },
+    "windows": {
+      "title": "Windows Service",
+      "description": "Two options: nssm (service wrapper) or Windows Task Scheduler.",
+      "nssm": "Using nssm (Windows Service)",
+      "scheduler": "Using Task Scheduler"
+    }
+  },
+  "troubleshooting": {
+    "title": "Troubleshooting",
+    "description": "Common issues and solutions.",
+    "limitations": {
+      "title": "Known Limitations",
+      "thinking": {
+        "title": "Cannot resume Anthropic thinking models after switching to external model",
+        "description": "Once a conversation uses an external provider's model, it cannot continue with Anthropic's thinking models (Claude Opus, Sonnet, etc.).",
+        "reason1": "External providers are not fully compatible with Anthropic's native message format.",
+        "reason2": "Thinking models depend on specific native fields and context structure.",
+        "reason3": "External model responses don't meet the context format required by thinking models."
+      },
+      "recommendation": {
+        "title": "Recommended Usage",
+        "tip1": "Within the same conversation, only switch between external models.",
+        "tip2": "Start a new conversation when you need Anthropic thinking models."
+      }
+    },
+    "connection": {
+      "title": "Connection Issues",
+      "refused": {
+        "title": "Connection Refused",
+        "description": "Check that Summon is running and listening on the correct port."
+      },
+      "timeout": {
+        "title": "Request Timeout",
+        "description": "The upstream provider may be slow or unreachable. Check your network and provider status."
+      }
+    },
+    "config": {
+      "title": "Configuration Issues",
+      "notFound": {
+        "title": "Config File Not Found",
+        "description": "Ensure the config file exists in one of the search paths."
+      },
+      "envVar": {
+        "title": "Environment Variable Not Resolved",
+        "description": "Ensure environment variables referenced in config are set before starting Summon."
+      }
+    },
+    "provider": {
+      "title": "Provider Issues",
+      "description": "If a provider returns errors, test the connection directly to isolate whether it's a Summon issue or a provider issue."
+    }
+  }
+}

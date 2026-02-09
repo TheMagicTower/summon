@@ -1,0 +1,215 @@
+{
+  "nav": {
+    "home": "首页",
+    "installation": "安装",
+    "configuration": "配置",
+    "usage": "使用方法",
+    "providers": "提供商",
+    "service": "服务注册",
+    "troubleshooting": "故障排除"
+  },
+  "home": {
+    "title": "Summon",
+    "description": "一个基于模型名称将 Claude Code API 请求路由到不同 LLM 提供商的轻量级反向代理。在保持 Anthropic 订阅（OAuth）认证的同时，将特定模型分流到外部提供商。",
+    "getStarted": "开始使用",
+    "architecture": "架构",
+    "quickStart": "快速开始",
+    "install": "安装",
+    "run": "运行",
+    "features": "主要功能",
+    "feature": {
+      "routing": {
+        "title": "基于模型的路由",
+        "desc": "根据 /v1/messages POST 请求中的 model 字段，将 API 请求路由到不同的提供商。"
+      },
+      "auth": {
+        "title": "保持订阅认证",
+        "desc": "默认请求保持 Anthropic OAuth 令牌不变，仅对路由模型交换认证。"
+      },
+      "streaming": {
+        "title": "SSE 流式传输",
+        "desc": "通过零拷贝透传完全支持 Server-Sent Events 流式传输。"
+      },
+      "transparent": {
+        "title": "透明代理",
+        "desc": "Claude Code 无法检测到代理的存在。所有非消息请求不做任何更改直接通过。"
+      }
+    }
+  },
+  "installation": {
+    "title": "安装",
+    "description": "在您的系统上安装 Summon。",
+    "oneLine": {
+      "title": "一键安装（推荐）",
+      "wslNote": "WSL 使用相同的 Linux 安装器。您可以在 WSL 内部和 Windows 两端使用 Claude Code。"
+    },
+    "binary": {
+      "title": "二进制下载",
+      "description": "从 GitHub Releases 页面下载预构建的二进制文件。",
+      "platform": "平台",
+      "file": "文件",
+      "example": "示例：macOS Apple Silicon"
+    },
+    "source": {
+      "title": "从源码构建",
+      "description": "需要 Rust 工具链（stable）。"
+    }
+  },
+  "configuration": {
+    "title": "配置",
+    "description": "使用 YAML 配置文件配置 Summon。",
+    "location": {
+      "title": "配置文件位置",
+      "description": "Summon 按以下优先顺序搜索配置文件：",
+      "priority": "优先级",
+      "path": "路径",
+      "desc": "说明",
+      "explicit": "CLI 参数直接指定",
+      "envVar": "环境变量指定的路径",
+      "user": "用户级配置（XDG）",
+      "system": "系统级配置",
+      "cwd": "当前目录"
+    },
+    "structure": {
+      "title": "配置文件结构"
+    },
+    "fields": {
+      "title": "字段参考",
+      "server": "绑定地址和端口。出于安全考虑仅使用 127.0.0.1（禁止外部暴露）。",
+      "default": "非路由模型和非消息请求的默认上游 URL（通常为 Anthropic API）。",
+      "routes": "路由规则数组。从上到下评估，第一个匹配生效。",
+      "match": "对 model 字段的子字符串匹配。如果模型名称包含此字符串则匹配。",
+      "upstreamUrl": "匹配请求的目标 URL。",
+      "authHeader": "认证 HTTP 头名称（例如：x-api-key、Authorization）。",
+      "authValue": "认证值。支持 ${VAR} 环境变量引用。"
+    },
+    "env": {
+      "title": "环境变量",
+      "description": "API 密钥应存储为环境变量，不要直接写入配置文件。使用 ${VAR_NAME} 语法引用。"
+    }
+  },
+  "usage": {
+    "title": "使用方法",
+    "description": "如何运行 Summon 并连接 Claude Code。",
+    "basic": {
+      "title": "基本用法"
+    },
+    "claudeCode": {
+      "title": "Claude Code 集成",
+      "description": "通过设置 ANTHROPIC_BASE_URL 环境变量将 Claude Code 连接到 Summon。",
+      "manual": "手动连接",
+      "auto": {
+        "title": "自动连接（settings.json）",
+        "description": "添加到 Claude Code 设置中，每次启动时自动连接代理。"
+      }
+    },
+    "modelBinding": {
+      "title": "模型绑定",
+      "description": "将 Claude Code 的默认模型替换为外部提供商。安装脚本可以自动配置。"
+    },
+    "wsl": {
+      "title": "WSL 使用方法",
+      "description": "Summon 在 WSL 中可以正常工作。您可以在 WSL 内部和 Windows 两端使用 Claude Code。",
+      "inside": {
+        "title": "在 WSL 内部"
+      },
+      "outside": {
+        "title": "从 Windows（连接到 WSL）"
+      }
+    }
+  },
+  "providers": {
+    "title": "提供商指南",
+    "description": "支持的 LLM 提供商及其配置方法。",
+    "kimi": {
+      "description": "Kimi 提供用于编码任务的 Anthropic 兼容 API 端点。"
+    },
+    "zai": {
+      "description": "Z.AI（GLM）提供 Anthropic 兼容 API 端点。"
+    },
+    "custom": {
+      "title": "自定义提供商",
+      "description": "任何 Anthropic API 兼容的提供商都可以作为自定义路由添加。",
+      "note": {
+        "title": "兼容性说明",
+        "description": "v0.1 仅支持 Anthropic API 兼容的提供商。不兼容的提供商将在 v0.2 中通过请求/响应转换器支持。"
+      }
+    },
+    "routing": {
+      "title": "路由逻辑",
+      "description": "基于模型的路由工作方式：",
+      "rule1": "仅检查 /v1/messages POST 请求的 model 字段。",
+      "rule2": "路由从上到下评估，第一个匹配生效。",
+      "rule3": "match 对模型名称执行子字符串匹配。",
+      "rule4": "未匹配的模型转发到默认上游（Anthropic API）。"
+    }
+  },
+  "service": {
+    "title": "服务注册",
+    "description": "将 Summon 注册为自动启动的后台服务。",
+    "macos": {
+      "title": "macOS LaunchAgent",
+      "step1": "1. 创建 plist 文件",
+      "step2": "2. 加载并启动",
+      "manage": "管理命令"
+    },
+    "linux": {
+      "title": "Linux systemd 用户服务",
+      "step1": "1. 创建服务文件",
+      "step2": "2. 启用并启动",
+      "manage": "管理命令",
+      "wslNote": "WSL2：需要在 /etc/wsl.conf 中设置 [boot] systemd=true。"
+    },
+    "windows": {
+      "title": "Windows 服务",
+      "description": "两个选项：nssm（服务包装器）或 Windows 任务计划程序。",
+      "nssm": "使用 nssm（Windows 服务）",
+      "scheduler": "使用任务计划程序"
+    }
+  },
+  "troubleshooting": {
+    "title": "故障排除",
+    "description": "常见问题和解决方案。",
+    "limitations": {
+      "title": "已知限制",
+      "thinking": {
+        "title": "切换到外部模型后无法使用 Anthropic thinking 模型",
+        "description": "一旦对话使用了外部提供商的模型，就无法继续使用 Anthropic 的 thinking 模型（Claude Opus、Sonnet 等）。",
+        "reason1": "外部提供商与 Anthropic 的原生消息格式不完全兼容。",
+        "reason2": "Thinking 模型依赖于特定的原生字段和上下文结构。",
+        "reason3": "外部模型的响应不满足 thinking 模型所需的上下文格式。"
+      },
+      "recommendation": {
+        "title": "推荐使用方式",
+        "tip1": "在同一对话中，仅在外部模型之间切换。",
+        "tip2": "需要 Anthropic thinking 模型时，请开始新对话。"
+      }
+    },
+    "connection": {
+      "title": "连接问题",
+      "refused": {
+        "title": "连接被拒绝",
+        "description": "检查 Summon 是否正在运行并监听正确的端口。"
+      },
+      "timeout": {
+        "title": "请求超时",
+        "description": "上游提供商可能较慢或无法访问。请检查网络和提供商状态。"
+      }
+    },
+    "config": {
+      "title": "配置问题",
+      "notFound": {
+        "title": "找不到配置文件",
+        "description": "确保配置文件存在于搜索路径之一。"
+      },
+      "envVar": {
+        "title": "环境变量未解析",
+        "description": "确保在启动 Summon 之前设置了配置中引用的环境变量。"
+      }
+    },
+    "provider": {
+      "title": "提供商问题",
+      "description": "如果提供商返回错误，请直接测试连接以确定是 Summon 问题还是提供商问题。"
+    }
+  }
+}

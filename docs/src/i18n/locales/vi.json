@@ -1,0 +1,215 @@
+{
+  "nav": {
+    "home": "Trang chủ",
+    "installation": "Cài đặt",
+    "configuration": "Cấu hình",
+    "usage": "Sử dụng",
+    "providers": "Nhà cung cấp",
+    "service": "Đăng ký dịch vụ",
+    "troubleshooting": "Xử lý sự cố"
+  },
+  "home": {
+    "title": "Summon",
+    "description": "Reverse proxy nhẹ định tuyến các yêu cầu API của Claude Code đến các nhà cung cấp LLM khác nhau dựa trên tên model. Duy trì xác thực đăng ký Anthropic (OAuth) trong khi chuyển hướng các model cụ thể đến nhà cung cấp bên ngoài.",
+    "getStarted": "Bắt đầu",
+    "architecture": "Kiến trúc",
+    "quickStart": "Bắt đầu nhanh",
+    "install": "Cài đặt",
+    "run": "Chạy",
+    "features": "Tính năng chính",
+    "feature": {
+      "routing": {
+        "title": "Định tuyến theo Model",
+        "desc": "Định tuyến yêu cầu API đến các nhà cung cấp khác nhau dựa trên trường model trong yêu cầu /v1/messages POST."
+      },
+      "auth": {
+        "title": "Bảo toàn xác thực đăng ký",
+        "desc": "Giữ nguyên token OAuth của Anthropic cho các yêu cầu mặc định, chỉ thay đổi xác thực cho các model được định tuyến."
+      },
+      "streaming": {
+        "title": "SSE Streaming",
+        "desc": "Hỗ trợ đầy đủ Server-Sent Events streaming với passthrough không sao chép."
+      },
+      "transparent": {
+        "title": "Proxy trong suốt",
+        "desc": "Claude Code không thể phát hiện sự hiện diện của proxy. Tất cả yêu cầu không phải tin nhắn đều đi qua không thay đổi."
+      }
+    }
+  },
+  "installation": {
+    "title": "Cài đặt",
+    "description": "Cài đặt Summon trên hệ thống của bạn.",
+    "oneLine": {
+      "title": "Cài đặt một dòng (Khuyến nghị)",
+      "wslNote": "WSL sử dụng cùng trình cài đặt Linux. Bạn có thể sử dụng Claude Code từ cả bên trong WSL và Windows."
+    },
+    "binary": {
+      "title": "Tải binary",
+      "description": "Tải binary đã biên dịch từ trang GitHub Releases.",
+      "platform": "Nền tảng",
+      "file": "Tệp",
+      "example": "Ví dụ: macOS Apple Silicon"
+    },
+    "source": {
+      "title": "Biên dịch từ mã nguồn",
+      "description": "Yêu cầu Rust toolchain (stable)."
+    }
+  },
+  "configuration": {
+    "title": "Cấu hình",
+    "description": "Cấu hình Summon bằng tệp YAML.",
+    "location": {
+      "title": "Vị trí tệp cấu hình",
+      "description": "Summon tìm kiếm tệp cấu hình theo thứ tự ưu tiên sau:",
+      "priority": "Ưu tiên",
+      "path": "Đường dẫn",
+      "desc": "Mô tả",
+      "explicit": "Tham số CLI trực tiếp",
+      "envVar": "Đường dẫn từ biến môi trường",
+      "user": "Cấu hình người dùng (XDG)",
+      "system": "Cấu hình toàn hệ thống",
+      "cwd": "Thư mục hiện tại"
+    },
+    "structure": {
+      "title": "Cấu trúc tệp cấu hình"
+    },
+    "fields": {
+      "title": "Tham chiếu trường",
+      "server": "Địa chỉ bind và cổng. Sử dụng 127.0.0.1 để bảo mật (không phơi bày ra ngoài).",
+      "default": "URL upstream mặc định cho model không được định tuyến và yêu cầu không phải tin nhắn (thường là Anthropic API).",
+      "routes": "Mảng quy tắc định tuyến, đánh giá từ trên xuống, kết quả khớp đầu tiên được áp dụng.",
+      "match": "Khớp chuỗi con với trường model. Nếu tên model chứa chuỗi này thì khớp.",
+      "upstreamUrl": "URL đích cho các yêu cầu đã khớp.",
+      "authHeader": "Tên header HTTP xác thực (ví dụ: x-api-key, Authorization).",
+      "authValue": "Giá trị xác thực. Hỗ trợ tham chiếu biến môi trường ${VAR}."
+    },
+    "env": {
+      "title": "Biến môi trường",
+      "description": "API key nên được lưu trữ dưới dạng biến môi trường, không ghi trực tiếp vào tệp cấu hình. Sử dụng cú pháp ${VAR_NAME} để tham chiếu."
+    }
+  },
+  "usage": {
+    "title": "Sử dụng",
+    "description": "Cách chạy Summon và kết nối Claude Code.",
+    "basic": {
+      "title": "Sử dụng cơ bản"
+    },
+    "claudeCode": {
+      "title": "Tích hợp Claude Code",
+      "description": "Kết nối Claude Code với Summon bằng cách đặt biến môi trường ANTHROPIC_BASE_URL.",
+      "manual": "Kết nối thủ công",
+      "auto": {
+        "title": "Kết nối tự động (settings.json)",
+        "description": "Thêm vào cài đặt Claude Code để tự động kết nối proxy mỗi lần khởi chạy."
+      }
+    },
+    "modelBinding": {
+      "title": "Ràng buộc Model",
+      "description": "Thay thế model mặc định của Claude Code bằng nhà cung cấp bên ngoài. Script cài đặt có thể cấu hình tự động."
+    },
+    "wsl": {
+      "title": "Sử dụng trên WSL",
+      "description": "Summon hoạt động trên WSL. Bạn có thể sử dụng Claude Code từ cả bên trong WSL và Windows.",
+      "inside": {
+        "title": "Bên trong WSL"
+      },
+      "outside": {
+        "title": "Từ Windows (kết nối đến WSL)"
+      }
+    }
+  },
+  "providers": {
+    "title": "Hướng dẫn nhà cung cấp",
+    "description": "Các nhà cung cấp LLM được hỗ trợ và cách cấu hình.",
+    "kimi": {
+      "description": "Kimi cung cấp endpoint API tương thích Anthropic cho các tác vụ lập trình."
+    },
+    "zai": {
+      "description": "Z.AI (GLM) cung cấp endpoint API tương thích Anthropic."
+    },
+    "custom": {
+      "title": "Nhà cung cấp tùy chỉnh",
+      "description": "Bất kỳ nhà cung cấp nào tương thích API Anthropic đều có thể được thêm làm route tùy chỉnh.",
+      "note": {
+        "title": "Lưu ý về tương thích",
+        "description": "v0.1 chỉ hỗ trợ nhà cung cấp tương thích Anthropic API. Nhà cung cấp không tương thích sẽ được hỗ trợ trong v0.2 thông qua transformer yêu cầu/phản hồi."
+      }
+    },
+    "routing": {
+      "title": "Logic định tuyến",
+      "description": "Cách định tuyến dựa trên model hoạt động:",
+      "rule1": "Chỉ kiểm tra trường model của yêu cầu /v1/messages POST.",
+      "rule2": "Route được đánh giá từ trên xuống; kết quả khớp đầu tiên được áp dụng.",
+      "rule3": "match thực hiện khớp chuỗi con trên tên model.",
+      "rule4": "Model không khớp được chuyển tiếp đến upstream mặc định (Anthropic API)."
+    }
+  },
+  "service": {
+    "title": "Đăng ký dịch vụ",
+    "description": "Đăng ký Summon làm dịch vụ nền tự động khởi động.",
+    "macos": {
+      "title": "macOS LaunchAgent",
+      "step1": "1. Tạo tệp plist",
+      "step2": "2. Tải và khởi động",
+      "manage": "Lệnh quản lý"
+    },
+    "linux": {
+      "title": "Dịch vụ systemd người dùng Linux",
+      "step1": "1. Tạo tệp dịch vụ",
+      "step2": "2. Kích hoạt và khởi động",
+      "manage": "Lệnh quản lý",
+      "wslNote": "WSL2: Cần thiết lập [boot] systemd=true trong /etc/wsl.conf."
+    },
+    "windows": {
+      "title": "Dịch vụ Windows",
+      "description": "Hai tùy chọn: nssm (service wrapper) hoặc Windows Task Scheduler.",
+      "nssm": "Sử dụng nssm (Windows Service)",
+      "scheduler": "Sử dụng Task Scheduler"
+    }
+  },
+  "troubleshooting": {
+    "title": "Xử lý sự cố",
+    "description": "Các vấn đề thường gặp và giải pháp.",
+    "limitations": {
+      "title": "Hạn chế đã biết",
+      "thinking": {
+        "title": "Không thể sử dụng model thinking của Anthropic sau khi chuyển sang model bên ngoài",
+        "description": "Khi cuộc hội thoại đã sử dụng model của nhà cung cấp bên ngoài, không thể tiếp tục với các model thinking của Anthropic (Claude Opus, Sonnet, v.v.).",
+        "reason1": "Nhà cung cấp bên ngoài không hoàn toàn tương thích với định dạng tin nhắn gốc của Anthropic.",
+        "reason2": "Model thinking phụ thuộc vào các trường gốc cụ thể và cấu trúc ngữ cảnh.",
+        "reason3": "Phản hồi từ model bên ngoài không đáp ứng định dạng ngữ cảnh mà model thinking yêu cầu."
+      },
+      "recommendation": {
+        "title": "Cách sử dụng khuyến nghị",
+        "tip1": "Trong cùng một cuộc hội thoại, chỉ chuyển đổi giữa các model bên ngoài.",
+        "tip2": "Bắt đầu cuộc hội thoại mới khi cần model thinking của Anthropic."
+      }
+    },
+    "connection": {
+      "title": "Vấn đề kết nối",
+      "refused": {
+        "title": "Kết nối bị từ chối",
+        "description": "Kiểm tra xem Summon có đang chạy và lắng nghe trên cổng đúng không."
+      },
+      "timeout": {
+        "title": "Yêu cầu hết thời gian",
+        "description": "Nhà cung cấp upstream có thể chậm hoặc không thể truy cập. Kiểm tra mạng và trạng thái nhà cung cấp."
+      }
+    },
+    "config": {
+      "title": "Vấn đề cấu hình",
+      "notFound": {
+        "title": "Không tìm thấy tệp cấu hình",
+        "description": "Đảm bảo tệp cấu hình tồn tại trong một trong các đường dẫn tìm kiếm."
+      },
+      "envVar": {
+        "title": "Biến môi trường không được giải quyết",
+        "description": "Đảm bảo các biến môi trường được tham chiếu trong cấu hình đã được đặt trước khi khởi động Summon."
+      }
+    },
+    "provider": {
+      "title": "Vấn đề nhà cung cấp",
+      "description": "Nếu nhà cung cấp trả về lỗi, hãy kiểm tra kết nối trực tiếp để xác định đó là vấn đề của Summon hay nhà cung cấp."
+    }
+  }
+}

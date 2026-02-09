@@ -1,0 +1,215 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "installation": "Installation",
+    "configuration": "Konfiguration",
+    "usage": "Verwendung",
+    "providers": "Anbieter",
+    "service": "Dienstregistrierung",
+    "troubleshooting": "Fehlerbehebung"
+  },
+  "home": {
+    "title": "Summon",
+    "description": "Ein leichtgewichtiger Reverse-Proxy, der Claude Code API-Anfragen basierend auf Modellnamen an verschiedene LLM-Anbieter weiterleitet. Behält die Anthropic-Abonnement-Authentifizierung (OAuth) bei und leitet nur bestimmte Modelle an externe Anbieter weiter.",
+    "getStarted": "Loslegen",
+    "architecture": "Architektur",
+    "quickStart": "Schnellstart",
+    "install": "Installation",
+    "run": "Ausführung",
+    "features": "Funktionen",
+    "feature": {
+      "routing": {
+        "title": "Modellbasiertes Routing",
+        "desc": "Leitet API-Anfragen basierend auf dem model-Feld in /v1/messages POST-Anfragen an verschiedene Anbieter weiter."
+      },
+      "auth": {
+        "title": "Abonnement-Authentifizierung beibehalten",
+        "desc": "Behält Anthropic OAuth-Token für Standardanfragen bei und tauscht die Authentifizierung nur für geroutete Modelle aus."
+      },
+      "streaming": {
+        "title": "SSE-Streaming",
+        "desc": "Volle Unterstützung für Server-Sent Events Streaming mit Zero-Copy-Passthrough."
+      },
+      "transparent": {
+        "title": "Transparenter Proxy",
+        "desc": "Claude Code kann die Anwesenheit des Proxys nicht erkennen. Alle Nicht-Nachrichtenanfragen passieren unverändert."
+      }
+    }
+  },
+  "installation": {
+    "title": "Installation",
+    "description": "Installieren Sie Summon auf Ihrem System.",
+    "oneLine": {
+      "title": "Einzeiler-Installation (Empfohlen)",
+      "wslNote": "WSL verwendet denselben Linux-Installer. Sie können Claude Code sowohl aus WSL als auch aus Windows verwenden."
+    },
+    "binary": {
+      "title": "Binär-Download",
+      "description": "Laden Sie vorkompilierte Binärdateien von der GitHub Releases-Seite herunter.",
+      "platform": "Plattform",
+      "file": "Datei",
+      "example": "Beispiel: macOS Apple Silicon"
+    },
+    "source": {
+      "title": "Aus Quellcode kompilieren",
+      "description": "Erfordert Rust-Toolchain (stable)."
+    }
+  },
+  "configuration": {
+    "title": "Konfiguration",
+    "description": "Konfigurieren Sie Summon mit einer YAML-Konfigurationsdatei.",
+    "location": {
+      "title": "Speicherort der Konfigurationsdatei",
+      "description": "Summon sucht Konfigurationsdateien in folgender Reihenfolge:",
+      "priority": "Priorität",
+      "path": "Pfad",
+      "desc": "Beschreibung",
+      "explicit": "Explizites CLI-Argument",
+      "envVar": "Pfad aus Umgebungsvariable",
+      "user": "Benutzerspezifische Konfiguration (XDG)",
+      "system": "Systemweite Konfiguration",
+      "cwd": "Aktuelles Verzeichnis"
+    },
+    "structure": {
+      "title": "Struktur der Konfigurationsdatei"
+    },
+    "fields": {
+      "title": "Feldreferenz",
+      "server": "Bind-Adresse und Port. Verwenden Sie 127.0.0.1 für Sicherheit (keine externe Exposition).",
+      "default": "Standard-Upstream-URL für nicht geroutete Modelle und Nicht-Nachrichtenanfragen (normalerweise Anthropic API).",
+      "routes": "Array von Routing-Regeln, von oben nach unten ausgewertet; der erste Treffer gewinnt.",
+      "match": "Teilzeichenfolgen-Abgleich gegen das model-Feld. Wenn der Modellname diese Zeichenkette enthält, passt die Route.",
+      "upstreamUrl": "Ziel-URL für übereinstimmende Anfragen.",
+      "authHeader": "Name des HTTP-Authentifizierungs-Headers (z.B. x-api-key, Authorization).",
+      "authValue": "Authentifizierungswert. Unterstützt ${VAR} Umgebungsvariablen-Referenzen."
+    },
+    "env": {
+      "title": "Umgebungsvariablen",
+      "description": "API-Schlüssel sollten als Umgebungsvariablen gespeichert werden, nicht direkt in Konfigurationsdateien. Verwenden Sie die ${VAR_NAME}-Syntax zur Referenzierung."
+    }
+  },
+  "usage": {
+    "title": "Verwendung",
+    "description": "So führen Sie Summon aus und verbinden Claude Code.",
+    "basic": {
+      "title": "Grundlegende Verwendung"
+    },
+    "claudeCode": {
+      "title": "Claude Code-Integration",
+      "description": "Verbinden Sie Claude Code mit Summon durch Setzen der ANTHROPIC_BASE_URL Umgebungsvariable.",
+      "manual": "Manuelle Verbindung",
+      "auto": {
+        "title": "Automatische Verbindung (settings.json)",
+        "description": "Fügen Sie es den Claude Code-Einstellungen hinzu für automatische Proxy-Verbindung bei jedem Start."
+      }
+    },
+    "modelBinding": {
+      "title": "Modell-Bindung",
+      "description": "Ersetzen Sie die Standardmodelle von Claude Code durch externe Anbieter. Das Installationsskript kann dies automatisch konfigurieren."
+    },
+    "wsl": {
+      "title": "WSL-Verwendung",
+      "description": "Summon funktioniert in WSL. Sie können Claude Code sowohl aus WSL als auch aus Windows verwenden.",
+      "inside": {
+        "title": "Innerhalb von WSL"
+      },
+      "outside": {
+        "title": "Von Windows (Verbindung zu WSL)"
+      }
+    }
+  },
+  "providers": {
+    "title": "Anbieter-Leitfaden",
+    "description": "Unterstützte LLM-Anbieter und deren Konfiguration.",
+    "kimi": {
+      "description": "Kimi bietet einen Anthropic-kompatiblen API-Endpunkt für Programmieraufgaben."
+    },
+    "zai": {
+      "description": "Z.AI (GLM) bietet einen Anthropic-kompatiblen API-Endpunkt."
+    },
+    "custom": {
+      "title": "Benutzerdefinierter Anbieter",
+      "description": "Jeder Anthropic API-kompatible Anbieter kann als benutzerdefinierte Route hinzugefügt werden.",
+      "note": {
+        "title": "Kompatibilitätshinweis",
+        "description": "v0.1 unterstützt nur Anthropic API-kompatible Anbieter. Nicht-kompatible Anbieter werden in v0.2 über Anfrage-/Antwort-Transformer unterstützt."
+      }
+    },
+    "routing": {
+      "title": "Routing-Logik",
+      "description": "Wie modellbasiertes Routing funktioniert:",
+      "rule1": "Nur /v1/messages POST-Anfragen werden auf das model-Feld überprüft.",
+      "rule2": "Routen werden von oben nach unten ausgewertet; der erste Treffer gewinnt.",
+      "rule3": "match führt Teilzeichenfolgen-Abgleich auf den Modellnamen durch.",
+      "rule4": "Nicht übereinstimmende Modelle werden an den Standard-Upstream (Anthropic API) weitergeleitet."
+    }
+  },
+  "service": {
+    "title": "Dienstregistrierung",
+    "description": "Registrieren Sie Summon als Hintergrunddienst mit automatischem Start.",
+    "macos": {
+      "title": "macOS LaunchAgent",
+      "step1": "1. plist-Datei erstellen",
+      "step2": "2. Laden und starten",
+      "manage": "Verwaltungsbefehle"
+    },
+    "linux": {
+      "title": "Linux systemd-Benutzerdienst",
+      "step1": "1. Dienstdatei erstellen",
+      "step2": "2. Aktivieren und starten",
+      "manage": "Verwaltungsbefehle",
+      "wslNote": "WSL2: Erfordert [boot] systemd=true in /etc/wsl.conf."
+    },
+    "windows": {
+      "title": "Windows-Dienst",
+      "description": "Zwei Optionen: nssm (Dienst-Wrapper) oder Windows-Aufgabenplanung.",
+      "nssm": "Mit nssm (Windows-Dienst)",
+      "scheduler": "Mit Aufgabenplanung"
+    }
+  },
+  "troubleshooting": {
+    "title": "Fehlerbehebung",
+    "description": "Häufige Probleme und Lösungen.",
+    "limitations": {
+      "title": "Bekannte Einschränkungen",
+      "thinking": {
+        "title": "Anthropic Thinking-Modelle nach Wechsel zu externem Modell nicht verwendbar",
+        "description": "Sobald ein Gespräch das Modell eines externen Anbieters verwendet, kann es nicht mit Anthropics Thinking-Modellen (Claude Opus, Sonnet usw.) fortgesetzt werden.",
+        "reason1": "Externe Anbieter sind nicht vollständig kompatibel mit Anthropics nativem Nachrichtenformat.",
+        "reason2": "Thinking-Modelle sind auf bestimmte native Felder und Kontextstrukturen angewiesen.",
+        "reason3": "Antworten externer Modelle erfüllen nicht das von Thinking-Modellen benötigte Kontextformat."
+      },
+      "recommendation": {
+        "title": "Empfohlene Verwendung",
+        "tip1": "Wechseln Sie innerhalb desselben Gesprächs nur zwischen externen Modellen.",
+        "tip2": "Starten Sie ein neues Gespräch, wenn Sie Anthropic Thinking-Modelle benötigen."
+      }
+    },
+    "connection": {
+      "title": "Verbindungsprobleme",
+      "refused": {
+        "title": "Verbindung abgelehnt",
+        "description": "Überprüfen Sie, ob Summon läuft und auf dem richtigen Port lauscht."
+      },
+      "timeout": {
+        "title": "Anfrage-Zeitüberschreitung",
+        "description": "Der Upstream-Anbieter könnte langsam oder nicht erreichbar sein. Überprüfen Sie Ihr Netzwerk und den Anbieterstatus."
+      }
+    },
+    "config": {
+      "title": "Konfigurationsprobleme",
+      "notFound": {
+        "title": "Konfigurationsdatei nicht gefunden",
+        "description": "Stellen Sie sicher, dass die Konfigurationsdatei in einem der Suchpfade vorhanden ist."
+      },
+      "envVar": {
+        "title": "Umgebungsvariable nicht aufgelöst",
+        "description": "Stellen Sie sicher, dass die in der Konfiguration referenzierten Umgebungsvariablen vor dem Start von Summon gesetzt sind."
+      }
+    },
+    "provider": {
+      "title": "Anbieterprobleme",
+      "description": "Wenn ein Anbieter Fehler zurückgibt, testen Sie die direkte Verbindung, um festzustellen, ob es ein Summon- oder Anbieterproblem ist."
+    }
+  }
+}

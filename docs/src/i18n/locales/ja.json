@@ -1,0 +1,215 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "installation": "インストール",
+    "configuration": "設定",
+    "usage": "使い方",
+    "providers": "プロバイダー",
+    "service": "サービス登録",
+    "troubleshooting": "トラブルシューティング"
+  },
+  "home": {
+    "title": "Summon",
+    "description": "モデル名に基づいてClaude CodeのAPIリクエストを異なるLLMプロバイダーにルーティングする軽量リバースプロキシです。Anthropicサブスクリプション（OAuth）認証を維持しながら、特定モデルのみ外部プロバイダーに分岐します。",
+    "getStarted": "始める",
+    "architecture": "アーキテクチャ",
+    "quickStart": "クイックスタート",
+    "install": "インストール",
+    "run": "実行",
+    "features": "主な機能",
+    "feature": {
+      "routing": {
+        "title": "モデルベースルーティング",
+        "desc": "/v1/messages POSTリクエストのmodelフィールドに基づいて、APIリクエストを異なるプロバイダーにルーティングします。"
+      },
+      "auth": {
+        "title": "サブスクリプション認証の維持",
+        "desc": "デフォルトリクエストにはAnthropic OAuthトークンをそのまま維持し、ルーティングされたモデルのみ認証を交換します。"
+      },
+      "streaming": {
+        "title": "SSEストリーミング",
+        "desc": "ゼロコピーパススルーによるServer-Sent Eventsストリーミングの完全サポート。"
+      },
+      "transparent": {
+        "title": "透過プロキシ",
+        "desc": "Claude Codeはプロキシの存在を検出できません。非メッセージリクエストは変更なしで通過します。"
+      }
+    }
+  },
+  "installation": {
+    "title": "インストール",
+    "description": "システムにSummonをインストールします。",
+    "oneLine": {
+      "title": "ワンラインインストール（推奨）",
+      "wslNote": "WSLは同じLinuxインストーラーを使用します。WSL内部とWindowsの両方からClaude Codeを使用できます。"
+    },
+    "binary": {
+      "title": "バイナリダウンロード",
+      "description": "GitHub Releasesページからビルド済みバイナリをダウンロードしてください。",
+      "platform": "プラットフォーム",
+      "file": "ファイル",
+      "example": "例: macOS Apple Silicon"
+    },
+    "source": {
+      "title": "ソースからビルド",
+      "description": "Rustツールチェーン（stable）が必要です。"
+    }
+  },
+  "configuration": {
+    "title": "設定",
+    "description": "YAML設定ファイルでSummonを設定します。",
+    "location": {
+      "title": "設定ファイルの場所",
+      "description": "Summonは以下の優先順位で設定ファイルを検索します：",
+      "priority": "優先度",
+      "path": "パス",
+      "desc": "説明",
+      "explicit": "CLI引数で直接指定",
+      "envVar": "環境変数で指定されたパス",
+      "user": "ユーザー別設定（XDG）",
+      "system": "システムワイド設定",
+      "cwd": "カレントディレクトリ"
+    },
+    "structure": {
+      "title": "設定ファイル構造"
+    },
+    "fields": {
+      "title": "フィールドリファレンス",
+      "server": "バインドアドレスとポート。セキュリティのため127.0.0.1のみ使用（外部公開禁止）。",
+      "default": "ルーティング対象外のモデルと非メッセージリクエストのデフォルトアップストリームURL（通常はAnthropic API）。",
+      "routes": "ルーティングルールの配列。上から下に評価し、最初のマッチが適用されます。",
+      "match": "modelフィールドに対する部分文字列マッチング。モデル名にこの文字列が含まれていればマッチします。",
+      "upstreamUrl": "マッチしたリクエストのターゲットURL。",
+      "authHeader": "認証HTTPヘッダー名（例：x-api-key、Authorization）。",
+      "authValue": "認証値。${VAR}環境変数参照をサポートします。"
+    },
+    "env": {
+      "title": "環境変数",
+      "description": "APIキーは設定ファイルに直接記載せず、環境変数として保存してください。${VAR_NAME}構文で参照できます。"
+    }
+  },
+  "usage": {
+    "title": "使い方",
+    "description": "Summonの実行とClaude Codeの接続方法。",
+    "basic": {
+      "title": "基本的な使い方"
+    },
+    "claudeCode": {
+      "title": "Claude Code連携",
+      "description": "ANTHROPIC_BASE_URL環境変数を設定してClaude CodeをSummonに接続します。",
+      "manual": "手動接続",
+      "auto": {
+        "title": "自動接続（settings.json）",
+        "description": "Claude Code設定に追加すると、起動時に自動でプロキシに接続されます。"
+      }
+    },
+    "modelBinding": {
+      "title": "モデルバインディング",
+      "description": "Claude Codeのデフォルトモデルを外部プロバイダーに変更します。インストールスクリプトで自動設定可能です。"
+    },
+    "wsl": {
+      "title": "WSLでの使い方",
+      "description": "SummonはWSLで動作します。WSL内部とWindowsの両方からClaude Codeを使用できます。",
+      "inside": {
+        "title": "WSL内部から"
+      },
+      "outside": {
+        "title": "Windowsから（WSLに接続）"
+      }
+    }
+  },
+  "providers": {
+    "title": "プロバイダーガイド",
+    "description": "サポートされているLLMプロバイダーと設定方法。",
+    "kimi": {
+      "description": "Kimiはコーディングタスク向けのAnthropic互換APIエンドポイントを提供します。"
+    },
+    "zai": {
+      "description": "Z.AI（GLM）はAnthropic互換APIエンドポイントを提供します。"
+    },
+    "custom": {
+      "title": "カスタムプロバイダー",
+      "description": "Anthropic API互換プロバイダーであれば、カスタムルートとして追加できます。",
+      "note": {
+        "title": "互換性に関する注意",
+        "description": "v0.1はAnthropic API互換プロバイダーのみサポートします。非互換プロバイダーはv0.2でリクエスト/レスポンストランスフォーマーを通じてサポート予定です。"
+      }
+    },
+    "routing": {
+      "title": "ルーティングロジック",
+      "description": "モデルベースルーティングの動作方式：",
+      "rule1": "/v1/messages POSTリクエストのみmodelフィールドを検査します。",
+      "rule2": "ルートは上から下に評価され、最初のマッチが適用されます。",
+      "rule3": "matchはモデル名に対する部分文字列マッチングを行います。",
+      "rule4": "マッチしないモデルはデフォルトアップストリーム（Anthropic API）に転送されます。"
+    }
+  },
+  "service": {
+    "title": "サービス登録",
+    "description": "Summonを自動起動するバックグラウンドサービスとして登録します。",
+    "macos": {
+      "title": "macOS LaunchAgent",
+      "step1": "1. plistファイルの作成",
+      "step2": "2. ロードと開始",
+      "manage": "管理コマンド"
+    },
+    "linux": {
+      "title": "Linux systemdユーザーサービス",
+      "step1": "1. サービスファイルの作成",
+      "step2": "2. 有効化と開始",
+      "manage": "管理コマンド",
+      "wslNote": "WSL2: /etc/wsl.confに[boot] systemd=trueの設定が必要です。"
+    },
+    "windows": {
+      "title": "Windowsサービス",
+      "description": "2つのオプション：nssm（サービスラッパー）またはWindowsタスクスケジューラ。",
+      "nssm": "nssm使用（Windowsサービス）",
+      "scheduler": "タスクスケジューラ使用"
+    }
+  },
+  "troubleshooting": {
+    "title": "トラブルシューティング",
+    "description": "一般的な問題と解決方法。",
+    "limitations": {
+      "title": "既知の制限事項",
+      "thinking": {
+        "title": "外部モデルに切り替えた後、Anthropicのthinkingモデルを使用不可",
+        "description": "一度外部プロバイダーのモデルに切り替えた会話は、その後Anthropicのthinkingモデル（Claude Opus、Sonnetなど）で続行できません。",
+        "reason1": "外部プロバイダーはAnthropicのネイティブメッセージ形式と完全に互換性がありません。",
+        "reason2": "Thinkingモデルは特定のネイティブフィールドとコンテキスト構造に依存しています。",
+        "reason3": "外部モデルの応答はthinkingモデルが要求するコンテキスト形式を満たしません。"
+      },
+      "recommendation": {
+        "title": "推奨される使い方",
+        "tip1": "同じ会話内では外部モデル間でのみ切り替えてください。",
+        "tip2": "Anthropicのthinkingモデルが必要な場合は、新しい会話を開始してください。"
+      }
+    },
+    "connection": {
+      "title": "接続の問題",
+      "refused": {
+        "title": "接続が拒否された",
+        "description": "Summonが実行中で、正しいポートでリスニングしているか確認してください。"
+      },
+      "timeout": {
+        "title": "リクエストタイムアウト",
+        "description": "アップストリームプロバイダーが遅いか、到達不能の可能性があります。ネットワークとプロバイダーの状態を確認してください。"
+      }
+    },
+    "config": {
+      "title": "設定の問題",
+      "notFound": {
+        "title": "設定ファイルが見つからない",
+        "description": "検索パスのいずれかに設定ファイルが存在することを確認してください。"
+      },
+      "envVar": {
+        "title": "環境変数が解決されない",
+        "description": "設定で参照されている環境変数がSummon起動前に設定されていることを確認してください。"
+      }
+    },
+    "provider": {
+      "title": "プロバイダーの問題",
+      "description": "プロバイダーがエラーを返す場合、Summonの問題かプロバイダーの問題かを切り分けるために、直接接続をテストしてください。"
+    }
+  }
+}

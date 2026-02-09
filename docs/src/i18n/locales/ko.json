@@ -1,0 +1,215 @@
+{
+  "nav": {
+    "home": "홈",
+    "installation": "설치",
+    "configuration": "설정",
+    "usage": "사용법",
+    "providers": "프로바이더",
+    "service": "서비스 등록",
+    "troubleshooting": "문제 해결"
+  },
+  "home": {
+    "title": "Summon",
+    "description": "모델명 기반으로 Claude Code의 API 요청을 다른 LLM 제공자에게 라우팅하는 경량 리버스 프록시입니다. 기존 Anthropic 구독(OAuth) 인증을 유지하면서 특정 모델만 외부 제공자로 분기합니다.",
+    "getStarted": "시작하기",
+    "architecture": "아키텍처",
+    "quickStart": "빠른 시작",
+    "install": "설치",
+    "run": "실행",
+    "features": "주요 기능",
+    "feature": {
+      "routing": {
+        "title": "모델 기반 라우팅",
+        "desc": "/v1/messages POST 요청의 model 필드를 기반으로 API 요청을 다른 프로바이더로 라우팅합니다."
+      },
+      "auth": {
+        "title": "구독 인증 유지",
+        "desc": "기본 요청에 대해 Anthropic OAuth 토큰을 그대로 유지하고, 라우팅된 모델에 대해서만 인증을 교체합니다."
+      },
+      "streaming": {
+        "title": "SSE 스트리밍",
+        "desc": "제로카피 패스스루로 Server-Sent Events 스트리밍을 완벽 지원합니다."
+      },
+      "transparent": {
+        "title": "투명한 프록시",
+        "desc": "Claude Code는 프록시의 존재를 인식할 수 없습니다. 비메시지 요청은 변경 없이 통과합니다."
+      }
+    }
+  },
+  "installation": {
+    "title": "설치",
+    "description": "시스템에 Summon을 설치합니다.",
+    "oneLine": {
+      "title": "원라인 설치 (권장)",
+      "wslNote": "WSL은 동일한 Linux 설치 스크립트를 사용합니다. WSL 내부와 Windows 양쪽에서 Claude Code를 사용할 수 있습니다."
+    },
+    "binary": {
+      "title": "바이너리 다운로드",
+      "description": "GitHub Releases 페이지에서 미리 빌드된 바이너리를 다운로드하세요.",
+      "platform": "플랫폼",
+      "file": "파일",
+      "example": "예: macOS Apple Silicon"
+    },
+    "source": {
+      "title": "소스에서 빌드",
+      "description": "Rust 툴체인(stable)이 필요합니다."
+    }
+  },
+  "configuration": {
+    "title": "설정",
+    "description": "YAML 설정 파일로 Summon을 설정합니다.",
+    "location": {
+      "title": "설정 파일 위치",
+      "description": "Summon은 다음 우선순위로 설정 파일을 검색합니다:",
+      "priority": "우선순위",
+      "path": "경로",
+      "desc": "설명",
+      "explicit": "CLI 인자로 직접 지정",
+      "envVar": "환경변수로 지정된 경로",
+      "user": "사용자별 설정 (XDG)",
+      "system": "시스템 와이드 설정",
+      "cwd": "현재 디렉토리"
+    },
+    "structure": {
+      "title": "설정 파일 구조"
+    },
+    "fields": {
+      "title": "필드 참조",
+      "server": "바인딩 주소와 포트. 보안을 위해 127.0.0.1만 사용 (외부 노출 금지).",
+      "default": "라우팅 대상이 아닌 모델과 비메시지 요청의 기본 업스트림 URL (보통 Anthropic API).",
+      "routes": "라우팅 규칙 배열. 위에서 아래로 평가하며, 첫 번째 매칭이 적용됩니다.",
+      "match": "model 필드에 대한 부분 문자열 매칭. 모델 이름에 이 문자열이 포함되면 매칭됩니다.",
+      "upstreamUrl": "매칭된 요청의 대상 URL.",
+      "authHeader": "인증 HTTP 헤더 이름 (예: x-api-key, Authorization).",
+      "authValue": "인증 값. ${VAR} 환경변수 참조를 지원합니다."
+    },
+    "env": {
+      "title": "환경변수",
+      "description": "API 키는 설정 파일에 직접 기입하지 않고 환경변수로 저장해야 합니다. ${VAR_NAME} 구문으로 참조하세요."
+    }
+  },
+  "usage": {
+    "title": "사용법",
+    "description": "Summon을 실행하고 Claude Code를 연결하는 방법.",
+    "basic": {
+      "title": "기본 사용법"
+    },
+    "claudeCode": {
+      "title": "Claude Code 연동",
+      "description": "ANTHROPIC_BASE_URL 환경변수를 설정하여 Claude Code를 Summon에 연결합니다.",
+      "manual": "수동 연결",
+      "auto": {
+        "title": "자동 연결 (settings.json)",
+        "description": "Claude Code 설정에 추가하면 매번 자동으로 프록시에 연결됩니다."
+      }
+    },
+    "modelBinding": {
+      "title": "모델 바인딩",
+      "description": "Claude Code의 기본 모델을 외부 프로바이더로 교체합니다. 설치 스크립트에서 자동 설정할 수 있습니다."
+    },
+    "wsl": {
+      "title": "WSL 사용법",
+      "description": "Summon은 WSL에서 동작합니다. WSL 내부와 Windows 양쪽에서 Claude Code를 사용할 수 있습니다.",
+      "inside": {
+        "title": "WSL 내부에서"
+      },
+      "outside": {
+        "title": "Windows에서 (WSL에 연결)"
+      }
+    }
+  },
+  "providers": {
+    "title": "프로바이더 가이드",
+    "description": "지원되는 LLM 프로바이더와 설정 방법.",
+    "kimi": {
+      "description": "Kimi는 코딩 작업을 위한 Anthropic 호환 API 엔드포인트를 제공합니다."
+    },
+    "zai": {
+      "description": "Z.AI(GLM)는 Anthropic 호환 API 엔드포인트를 제공합니다."
+    },
+    "custom": {
+      "title": "커스텀 프로바이더",
+      "description": "Anthropic API 호환 프로바이더라면 커스텀 라우트로 추가할 수 있습니다.",
+      "note": {
+        "title": "호환성 참고",
+        "description": "v0.1은 Anthropic API 호환 프로바이더만 지원합니다. 비호환 프로바이더는 v0.2에서 요청/응답 트랜스포머를 통해 지원 예정입니다."
+      }
+    },
+    "routing": {
+      "title": "라우팅 로직",
+      "description": "모델 기반 라우팅 동작 방식:",
+      "rule1": "/v1/messages POST 요청만 model 필드를 검사합니다.",
+      "rule2": "라우트는 위에서 아래로 평가되며, 첫 번째 매칭이 적용됩니다.",
+      "rule3": "match는 모델 이름에 대한 부분 문자열 매칭을 수행합니다.",
+      "rule4": "매칭되지 않는 모델은 기본 업스트림(Anthropic API)으로 전달됩니다."
+    }
+  },
+  "service": {
+    "title": "서비스 등록",
+    "description": "Summon을 자동으로 시작하는 백그라운드 서비스로 등록합니다.",
+    "macos": {
+      "title": "macOS LaunchAgent",
+      "step1": "1. plist 파일 생성",
+      "step2": "2. 로드 및 시작",
+      "manage": "관리 명령어"
+    },
+    "linux": {
+      "title": "Linux systemd 사용자 서비스",
+      "step1": "1. 서비스 파일 생성",
+      "step2": "2. 활성화 및 시작",
+      "manage": "관리 명령어",
+      "wslNote": "WSL2: /etc/wsl.conf에 [boot] systemd=true 설정이 필요합니다."
+    },
+    "windows": {
+      "title": "Windows 서비스",
+      "description": "두 가지 옵션: nssm(서비스 래퍼) 또는 Windows 작업 스케줄러.",
+      "nssm": "nssm 사용 (Windows 서비스)",
+      "scheduler": "작업 스케줄러 사용"
+    }
+  },
+  "troubleshooting": {
+    "title": "문제 해결",
+    "description": "일반적인 문제와 해결 방법.",
+    "limitations": {
+      "title": "알려진 제한사항",
+      "thinking": {
+        "title": "외부 모델로 전환 후 Anthropic thinking 모델 사용 불가",
+        "description": "한 번 외부 제공자의 모델로 교체된 대화는 이후 Anthropic의 thinking 모델(Claude Opus, Sonnet 등)에서 이어서 진행할 수 없습니다.",
+        "reason1": "외부 제공자는 Anthropic의 네이티브 메시지 형식과 완전히 호환되지 않습니다.",
+        "reason2": "Thinking 모델은 특정 네이티브 필드와 컨텍스트 구조에 의존합니다.",
+        "reason3": "외부 모델의 응답은 thinking 모델이 요구하는 컨텍스트 형식을 충족하지 못합니다."
+      },
+      "recommendation": {
+        "title": "권장 사용 방식",
+        "tip1": "동일한 대화 내에서는 외부 모델 간에만 전환하세요.",
+        "tip2": "Anthropic thinking 모델이 필요하면 새로운 대화를 시작하세요."
+      }
+    },
+    "connection": {
+      "title": "연결 문제",
+      "refused": {
+        "title": "연결 거부됨",
+        "description": "Summon이 실행 중이고 올바른 포트에서 리스닝하는지 확인하세요."
+      },
+      "timeout": {
+        "title": "요청 타임아웃",
+        "description": "업스트림 프로바이더가 느리거나 접근 불가능할 수 있습니다. 네트워크와 프로바이더 상태를 확인하세요."
+      }
+    },
+    "config": {
+      "title": "설정 문제",
+      "notFound": {
+        "title": "설정 파일을 찾을 수 없음",
+        "description": "검색 경로 중 하나에 설정 파일이 있는지 확인하세요."
+      },
+      "envVar": {
+        "title": "환경변수가 해석되지 않음",
+        "description": "설정에서 참조하는 환경변수가 Summon 시작 전에 설정되어 있는지 확인하세요."
+      }
+    },
+    "provider": {
+      "title": "프로바이더 문제",
+      "description": "프로바이더가 오류를 반환하면, Summon 문제인지 프로바이더 문제인지 분리하기 위해 직접 연결을 테스트하세요."
+    }
+  }
+}
