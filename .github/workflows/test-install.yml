@@ -1,0 +1,180 @@
+name: Test Install Scripts
+
+on:
+  push:
+    branches: [master]
+    paths: ['install.sh', 'install.ps1']
+  pull_request:
+    paths: ['install.sh', 'install.ps1']
+
+jobs:
+  test-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: summon-linux-amd64
+            script: bash
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: summon-darwin-arm64
+            script: bash
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: summon-windows-amd64
+            script: pwsh
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust 툴체인 설치
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 캐시 설정
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+
+      - name: 릴리즈 빌드 (Unix)
+        if: runner.os != 'Windows'
+        run: cargo build --release --target "$TARGET"
+        env:
+          TARGET: ${{ matrix.target }}
+
+      - name: 릴리즈 빌드 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cargo build --release --target $env:TARGET
+        env:
+          TARGET: ${{ matrix.target }}
+
+      - name: 바이너리 패키징 (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cp "target/${TARGET}/release/summon" "${ARTIFACT}"
+          chmod +x "${ARTIFACT}"
+        env:
+          TARGET: ${{ matrix.target }}
+          ARTIFACT: ${{ matrix.artifact }}
+
+      - name: 바이너리 패키징 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "target\$env:TARGET\release\summon.exe" "$env:ARTIFACT.exe"
+        env:
+          TARGET: ${{ matrix.target }}
+          ARTIFACT: ${{ matrix.artifact }}
+
+      - name: 설치 스크립트 실행 (Unix)
+        if: runner.os != 'Windows'
+        run: bash install.sh
+        env:
+          SUMMON_NON_INTERACTIVE: "1"
+          SUMMON_BINARY: "./${{ matrix.artifact }}"
+          SUMMON_VERSION: "v0.0.0-test"
+          INSTALL_DIR: "${{ runner.temp }}/summon-test/bin"
+          CONFIG_FILE: "${{ runner.temp }}/summon-test/config.yaml"
+
+      - name: 설치 스크립트 실행 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:SUMMON_NON_INTERACTIVE = "1"
+          $env:SUMMON_BINARY = "$env:ARTIFACT.exe"
+          $env:SUMMON_VERSION = "v0.0.0-test"
+          $env:INSTALL_DIR = "$env:TEST_DIR\bin"
+          $env:CONFIG_FILE = "$env:TEST_DIR\config.yaml"
+          & .\install.ps1
+        env:
+          ARTIFACT: ${{ matrix.artifact }}
+          TEST_DIR: "${{ runner.temp }}\\summon-test"
+
+      - name: 검증 - 바이너리 존재 확인 (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "--- 바이너리 존재 확인 ---"
+          test -f "${TEST_DIR}/bin/summon" || { echo "FAIL: 바이너리가 없습니다"; exit 1; }
+          echo "OK: 바이너리 존재"
+        env:
+          TEST_DIR: "${{ runner.temp }}/summon-test"
+
+      - name: 검증 - 바이너리 존재 확인 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "--- 바이너리 존재 확인 ---"
+          $binary = Join-Path $env:TEST_DIR "bin\summon.exe"
+          if (-not (Test-Path $binary)) { Write-Error "FAIL: 바이너리가 없습니다"; exit 1 }
+          Write-Host "OK: 바이너리 존재"
+        env:
+          TEST_DIR: "${{ runner.temp }}\\summon-test"
+
+      - name: 검증 - 바이너리 실행 확인 (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "--- 바이너리 실행 확인 ---"
+          "${TEST_DIR}/bin/summon" --help || { echo "FAIL: 바이너리 실행 실패"; exit 1; }
+          echo "OK: 바이너리 실행 성공"
+        env:
+          TEST_DIR: "${{ runner.temp }}/summon-test"
+
+      - name: 검증 - 바이너리 실행 확인 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "--- 바이너리 실행 확인 ---"
+          $binary = Join-Path $env:TEST_DIR "bin\summon.exe"
+          & $binary --help
+          if ($LASTEXITCODE -ne 0) { Write-Error "FAIL: 바이너리 실행 실패"; exit 1 }
+          Write-Host "OK: 바이너리 실행 성공"
+        env:
+          TEST_DIR: "${{ runner.temp }}\\summon-test"
+
+      - name: 검증 - config.yaml 생성 확인 (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "--- config.yaml 생성 확인 ---"
+          test -f "$CONFIG" || { echo "FAIL: config.yaml이 없습니다"; exit 1; }
+          echo "OK: config.yaml 존재"
+
+          echo "--- config.yaml 내용 검증 ---"
+          grep -q "server:" "$CONFIG" || { echo "FAIL: server 키 없음"; exit 1; }
+          grep -q "default:" "$CONFIG" || { echo "FAIL: default 키 없음"; exit 1; }
+          grep -q "routes:" "$CONFIG" || { echo "FAIL: routes 키 없음"; exit 1; }
+          echo "OK: config.yaml 구조 정상"
+
+          echo "--- config.yaml 내용 ---"
+          cat "$CONFIG"
+        env:
+          CONFIG: "${{ runner.temp }}/summon-test/config.yaml"
+
+      - name: 검증 - config.yaml 생성 확인 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "--- config.yaml 생성 확인 ---"
+          if (-not (Test-Path $env:CONFIG)) { Write-Error "FAIL: config.yaml이 없습니다"; exit 1 }
+          Write-Host "OK: config.yaml 존재"
+
+          Write-Host "--- config.yaml 내용 검증 ---"
+          $content = Get-Content $env:CONFIG -Raw
+          if ($content -notmatch "server:") { Write-Error "FAIL: server 키 없음"; exit 1 }
+          if ($content -notmatch "default:") { Write-Error "FAIL: default 키 없음"; exit 1 }
+          if ($content -notmatch "routes:") { Write-Error "FAIL: routes 키 없음"; exit 1 }
+          Write-Host "OK: config.yaml 구조 정상"
+
+          Write-Host "--- config.yaml 내용 ---"
+          Get-Content $env:CONFIG
+        env:
+          CONFIG: "${{ runner.temp }}\\summon-test\\config.yaml"

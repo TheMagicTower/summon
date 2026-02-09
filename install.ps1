@@ -17,6 +17,9 @@ function Detect-Platform {
 
 # 최신 릴리즈 버전 가져오기
 function Get-LatestVersion {
+    if ($env:SUMMON_VERSION) {
+        return $env:SUMMON_VERSION
+    }
     $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest"
     return $response.tag_name
 }
@@ -91,35 +94,44 @@ try {
     Write-Host "  플랫폼: $Platform"
     Write-Host "  버전: $Version"
 
-    # 임시 디렉토리
-    $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) "summon-install-$([guid]::NewGuid().ToString('N').Substring(0,8))"
-    New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
-
-    # 다운로드 (.zip)
-    $DownloadUrl = "https://github.com/$Repo/releases/download/$Version/summon-$Platform.zip"
-    $ZipPath = Join-Path $TempDir "summon.zip"
-    Write-Host "  다운로드: $DownloadUrl"
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
-
-    # 압축 해제
-    Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
-
     # 설치
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    $SourcePath = Join-Path $TempDir "summon-$Platform.exe"
     $DestBinary = Join-Path $InstallDir "summon.exe"
-    Copy-Item $SourcePath $DestBinary -Force
+
+    if ($env:SUMMON_BINARY) {
+        # 로컬 바이너리 사용 (CI/테스트용)
+        Write-Host "  로컬 바이너리: $($env:SUMMON_BINARY)"
+        Copy-Item $env:SUMMON_BINARY $DestBinary -Force
+    } else {
+        # GitHub releases에서 다운로드
+        $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) "summon-install-$([guid]::NewGuid().ToString('N').Substring(0,8))"
+        New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+
+        $DownloadUrl = "https://github.com/$Repo/releases/download/$Version/summon-$Platform.zip"
+        $ZipPath = Join-Path $TempDir "summon.zip"
+        Write-Host "  다운로드: $DownloadUrl"
+        Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
+
+        Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+
+        $SourcePath = Join-Path $TempDir "summon-$Platform.exe"
+        Copy-Item $SourcePath $DestBinary -Force
+    }
 
     Write-Host ""
     Write-Host "✅ Summon이 설치되었습니다: $DestBinary"
 
     # PATH 확인 및 추가
-    $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($UserPath -notlike "*$InstallDir*") {
-        [Environment]::SetEnvironmentVariable("Path", "$InstallDir;$UserPath", "User")
+    if ($env:SUMMON_NON_INTERACTIVE -ne "1") {
+        $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+        if ($UserPath -notlike "*$InstallDir*") {
+            [Environment]::SetEnvironmentVariable("Path", "$InstallDir;$UserPath", "User")
+            $env:Path = "$InstallDir;$env:Path"
+            Write-Host ""
+            Write-Host "✅ PATH에 $InstallDir 를 추가했습니다. (새 터미널에서 적용)"
+        }
+    } else {
         $env:Path = "$InstallDir;$env:Path"
-        Write-Host ""
-        Write-Host "✅ PATH에 $InstallDir 를 추가했습니다. (새 터미널에서 적용)"
     }
 
     # config.yaml 생성 (없을 때만)
@@ -132,13 +144,18 @@ try {
     if (-not (Test-Path $ConfigFile)) {
         New-Item -ItemType Directory -Path (Split-Path $ConfigFile) -Force | Out-Null
 
-        Write-Host ""
-        Write-Host "=== API 키 설정 ==="
-        Write-Host "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
-        Write-Host ""
+        if ($env:SUMMON_NON_INTERACTIVE -eq "1") {
+            $KimiKey = ""
+            $GlmKey = ""
+        } else {
+            Write-Host ""
+            Write-Host "=== API 키 설정 ==="
+            Write-Host "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
+            Write-Host ""
 
-        $KimiKey = Read-Host "  Kimi API 키"
-        $GlmKey = Read-Host "  Z.AI (GLM) API 키"
+            $KimiKey = Read-Host "  Kimi API 키"
+            $GlmKey = Read-Host "  Z.AI (GLM) API 키"
+        }
 
         # routes 생성
         $Routes = ""
@@ -191,7 +208,7 @@ routes:$Routes
     $SonnetModel = ""
     $ModelBindingSet = $false
 
-    if ($HasAnyKey) {
+    if ($HasAnyKey -and $env:SUMMON_NON_INTERACTIVE -ne "1") {
         Write-Host ""
         Write-Host "=== 모델 바인딩 ==="
         Write-Host "Claude Code의 기본 모델을 외부 프로바이더로 교체할 수 있습니다."
@@ -279,27 +296,29 @@ routes:$Routes
     }
 
     # 서비스 등록 (작업 스케줄러)
-    Write-Host ""
-    Write-Host "🔧 로그인 시 자동 시작으로 등록하시겠습니까?"
-    Write-Host "   Windows 작업 스케줄러를 사용하여 로그인 시 자동으로 summon을 시작합니다."
-    $InstallService = Read-Host "   등록하시겠습니까? (y/N)"
+    if ($env:SUMMON_NON_INTERACTIVE -ne "1") {
+        Write-Host ""
+        Write-Host "🔧 로그인 시 자동 시작으로 등록하시겠습니까?"
+        Write-Host "   Windows 작업 스케줄러를 사용하여 로그인 시 자동으로 summon을 시작합니다."
+        $InstallService = Read-Host "   등록하시겠습니까? (y/N)"
 
-    if ($InstallService -match "^[Yy]$") {
-        $TaskName = "Summon LLM Proxy"
-        try {
-            $Action = New-ScheduledTaskAction -Execute $DestBinary -Argument "--config `"$ConfigFile`""
-            $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-            $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-            Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Force | Out-Null
-            Write-Host ""
-            Write-Host "   ✅ 작업 스케줄러 등록 완료: $TaskName"
-            Write-Host "   📋 관리 명령어:"
-            Write-Host "      schtasks /run /tn `"$TaskName`"       # 즉시 시작"
-            Write-Host "      schtasks /end /tn `"$TaskName`"       # 중지"
-            Write-Host "      schtasks /query /tn `"$TaskName`"     # 상태 확인"
-            Write-Host "      schtasks /delete /tn `"$TaskName`"    # 삭제"
-        } catch {
-            Write-Host "   ⚠️  작업 스케줄러 등록에 실패했습니다. 관리자 권한으로 다시 시도해주세요."
+        if ($InstallService -match "^[Yy]$") {
+            $TaskName = "Summon LLM Proxy"
+            try {
+                $Action = New-ScheduledTaskAction -Execute $DestBinary -Argument "--config `"$ConfigFile`""
+                $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+                $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+                Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Force | Out-Null
+                Write-Host ""
+                Write-Host "   ✅ 작업 스케줄러 등록 완료: $TaskName"
+                Write-Host "   📋 관리 명령어:"
+                Write-Host "      schtasks /run /tn `"$TaskName`"       # 즉시 시작"
+                Write-Host "      schtasks /end /tn `"$TaskName`"       # 중지"
+                Write-Host "      schtasks /query /tn `"$TaskName`"     # 상태 확인"
+                Write-Host "      schtasks /delete /tn `"$TaskName`"    # 삭제"
+            } catch {
+                Write-Host "   ⚠️  작업 스케줄러 등록에 실패했습니다. 관리자 권한으로 다시 시도해주세요."
+            }
         }
     }
 

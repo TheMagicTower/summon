@@ -248,6 +248,10 @@ EOF
 
 # Get latest release version
 get_latest_version() {
+    if [ -n "${SUMMON_VERSION:-}" ]; then
+        echo "$SUMMON_VERSION"
+        return
+    fi
     curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4
 }
 
@@ -266,22 +270,27 @@ main() {
     echo "  플랫폼: $PLATFORM"
     echo "  버전: $VERSION"
 
-    # Create temp directory
-    TMP_DIR=$(mktemp -d)
-    trap "rm -rf $TMP_DIR" EXIT
-
-    # Download
-    DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/summon-$PLATFORM.tar.gz"
-    echo "  다운로드: $DOWNLOAD_URL"
-    curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/summon.tar.gz"
-
-    # Extract
-    tar -xzf "$TMP_DIR/summon.tar.gz" -C "$TMP_DIR"
-
-    # Install
+    # Install binary
     mkdir -p "$INSTALL_DIR"
-    cp "$TMP_DIR/summon-$PLATFORM" "$INSTALL_DIR/summon"
-    chmod +x "$INSTALL_DIR/summon"
+
+    if [ -n "${SUMMON_BINARY:-}" ]; then
+        # 로컬 바이너리 사용 (CI/테스트용)
+        echo "  로컬 바이너리: $SUMMON_BINARY"
+        cp "$SUMMON_BINARY" "$INSTALL_DIR/summon"
+        chmod +x "$INSTALL_DIR/summon"
+    else
+        # GitHub releases에서 다운로드
+        TMP_DIR=$(mktemp -d)
+        trap "rm -rf $TMP_DIR" EXIT
+
+        DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/summon-$PLATFORM.tar.gz"
+        echo "  다운로드: $DOWNLOAD_URL"
+        curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/summon.tar.gz"
+
+        tar -xzf "$TMP_DIR/summon.tar.gz" -C "$TMP_DIR"
+        cp "$TMP_DIR/summon-$PLATFORM" "$INSTALL_DIR/summon"
+        chmod +x "$INSTALL_DIR/summon"
+    fi
 
     echo ""
     echo "✅ Summon이 설치되었습니다: $INSTALL_DIR/summon"
@@ -302,13 +311,18 @@ main() {
     if [ ! -f "$CONFIG_FILE" ]; then
         mkdir -p "$(dirname "$CONFIG_FILE")"
 
-        echo ""
-        echo "=== API 키 설정 ==="
-        echo "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
-        echo ""
+        if [ "${SUMMON_NON_INTERACTIVE:-}" = "1" ]; then
+            KIMI_KEY=""
+            GLM_KEY=""
+        else
+            echo ""
+            echo "=== API 키 설정 ==="
+            echo "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
+            echo ""
 
-        read -rp "  Kimi API 키: " KIMI_KEY
-        read -rp "  Z.AI (GLM) API 키: " GLM_KEY
+            read -rp "  Kimi API 키: " KIMI_KEY
+            read -rp "  Z.AI (GLM) API 키: " GLM_KEY
+        fi
 
         # routes 생성
         ROUTES=""
@@ -356,7 +370,7 @@ EOF
     SONNET_MODEL=""
     MODEL_BINDING_SET=false
 
-    if [ "$HAS_ANY_KEY" = true ]; then
+    if [ "$HAS_ANY_KEY" = true ] && [ "${SUMMON_NON_INTERACTIVE:-}" != "1" ]; then
         echo ""
         echo "=== 모델 바인딩 ==="
         echo "Claude Code의 기본 모델을 외부 프로바이더로 교체할 수 있습니다."
@@ -456,24 +470,26 @@ EOF
     fi
 
     # Service installation prompt
-    echo ""
-    echo "🔧 백그라운드 서비스로 등록하시겠습니까?"
-    echo "   이 설정은 부팅 시 자동으로 summon을 시작하고, 종료 시 자동으로 재시작합니다."
-    read -rp "   서비스로 등록하시겠습니까? (y/N): " INSTALL_SERVICE
+    if [ "${SUMMON_NON_INTERACTIVE:-}" != "1" ]; then
+        echo ""
+        echo "🔧 백그라운드 서비스로 등록하시겠습니까?"
+        echo "   이 설정은 부팅 시 자동으로 summon을 시작하고, 종료 시 자동으로 재시작합니다."
+        read -rp "   서비스로 등록하시겠습니까? (y/N): " INSTALL_SERVICE
 
-    if [[ "$INSTALL_SERVICE" =~ ^[Yy]$ ]]; then
-        OS_TYPE=$(detect_os_type)
-        case "$OS_TYPE" in
-            macos)
-                install_macos_service "$CONFIG_FILE"
-                ;;
-            linux)
-                install_linux_service "$CONFIG_FILE"
-                ;;
-            *)
-                echo "   ⚠️  지원되지 않는 OS입니다. 수동으로 서비스를 등록해주세요."
-                ;;
-        esac
+        if [[ "$INSTALL_SERVICE" =~ ^[Yy]$ ]]; then
+            OS_TYPE=$(detect_os_type)
+            case "$OS_TYPE" in
+                macos)
+                    install_macos_service "$CONFIG_FILE"
+                    ;;
+                linux)
+                    install_linux_service "$CONFIG_FILE"
+                    ;;
+                *)
+                    echo "   ⚠️  지원되지 않는 OS입니다. 수동으로 서비스를 등록해주세요."
+                    ;;
+            esac
+        fi
     fi
 }
 

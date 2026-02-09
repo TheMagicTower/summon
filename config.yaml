@@ -13,11 +13,11 @@ routes:
       url: "https://api.z.ai/api/anthropic"
       auth:
         header: "x-api-key"
-        value: "f405af2b4ae343239483116cfa2abbd3.vfX1KguHa068yjp9"
+        value: "${ZAI_API_KEY}"
 
   - match: "kimi"
     upstream:
       url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
-        value: "Bearer sk-kimi-hZAweYFTn69nX7XdhKv1seuY9qlv9LaaM8x89Tv1EroJUyhJP4bC5ebyenozuc3y"
+        value: "Bearer ${KIMI_API_KEY}"
