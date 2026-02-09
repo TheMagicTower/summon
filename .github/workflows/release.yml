@@ -126,3 +126,4 @@ jobs:
             *.tar.gz
             *.zip
             install.sh
+            install.ps1
