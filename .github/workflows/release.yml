@@ -111,6 +111,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: 아티팩트 다운로드
         uses: actions/download-artifact@v4
         with:
@@ -123,3 +125,4 @@ jobs:
           files: |
             *.tar.gz
             *.zip
+            install.sh
