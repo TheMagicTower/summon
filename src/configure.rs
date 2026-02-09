@@ -121,6 +121,8 @@ pub fn run(action: &str, config_path: &str) {
         "remove" => remove_route(config_path),
         "status" => status(config_path),
         "restore" => restore(),
+        "install-service" => install_service(config_path),
+        "uninstall-service" => uninstall_service(),
         _ => eprintln!("알 수 없는 액션: {}", action),
     }
 }
@@ -201,7 +203,7 @@ fn stop() {
 
 // ── enable / disable ──
 
-/// settings.json 수정 + 프로세스 시작
+/// settings.json 수정 + 프로세스 시작 (+ 선택적 서비스 등록)
 fn enable(config_path: &str) {
     // 1. settings.json 백업 및 수정
     let settings_path = settings_json_path();
@@ -227,18 +229,74 @@ fn enable(config_path: &str) {
     write_settings(&settings);
     println!("settings.json에 ANTHROPIC_BASE_URL 추가됨");
 
-    // 2. 프로세스 시작
-    start(config_path);
+    // 2. 플랫폼에 따라 서비스 등록 여부 묻기
+    let platform = detect_platform();
+    match platform {
+        Platform::MacOS | Platform::Linux => {
+            let install_svc = Confirm::new()
+                .with_prompt("시스템 서비스로 등록하시겠습니까? (부팅 시 자동 시작)")
+                .default(false)
+                .interact()
+                .unwrap_or(false);
+
+            if install_svc {
+                install_service(config_path);
+            } else {
+                // 서비스 등록 없이 그냥 프로세스 시작
+                start(config_path);
+            }
+        }
+        _ => {
+            // Windows 또는 기타: 일반 프로세스 시작
+            start(config_path);
+        }
+    }
 
     println!("\n프록시 활성화 완료. Claude Code를 재시작하세요.");
 }
 
-/// 프로세스 중지 + settings.json 복원
+/// 프로세스 중지 + 서비스 제거 (선택적) + settings.json 복원
 fn disable(_config_path: &str) {
-    // 1. 프로세스 중지
+    let platform = detect_platform();
+
+    // 1. 서비스가 등록되어 있으면 제거 여부 묻기
+    match platform {
+        Platform::MacOS | Platform::Linux => {
+            let service_exists = match platform {
+                Platform::MacOS => {
+                    dirs::home_dir()
+                        .map(|h| h.join("Library/LaunchAgents/com.themagictower.summon.plist"))
+                        .map(|p| p.exists())
+                        .unwrap_or(false)
+                }
+                Platform::Linux => {
+                    dirs::home_dir()
+                        .map(|h| h.join(".config/systemd/user/summon.service"))
+                        .map(|p| p.exists())
+                        .unwrap_or(false)
+                }
+                _ => false,
+            };
+
+            if service_exists {
+                let uninstall_svc = Confirm::new()
+                    .with_prompt("시스템 서비스 등록을 해제하시겠습니까?")
+                    .default(true)
+                    .interact()
+                    .unwrap_or(true);
+
+                if uninstall_svc {
+                    uninstall_service();
+                }
+            }
+        }
+        _ => {}
+    }
+
+    // 2. 프로세스 중지
     stop();
 
-    // 2. settings.json에서 ANTHROPIC_BASE_URL 제거
+    // 3. settings.json에서 ANTHROPIC_BASE_URL 제거
     let mut settings = read_settings();
     if let Some(env) = settings.get_mut("env").and_then(|e| e.as_object_mut()) {
         env.remove("ANTHROPIC_BASE_URL");
@@ -417,7 +475,30 @@ fn status(config_path: &str) {
         println!("백업: 없음");
     }
 
-    // 4. 라우트 목록
+    // 4. 서비스 등록 상태
+    match detect_platform() {
+        Platform::MacOS => {
+            let plist_path = dirs::home_dir()
+                .map(|h| h.join("Library/LaunchAgents/com.themagictower.summon.plist"));
+            if plist_path.map(|p| p.exists()).unwrap_or(false) {
+                println!("서비스: LaunchAgent 등록됨 (macOS)");
+            } else {
+                println!("서비스: 미등록");
+            }
+        }
+        Platform::Linux => {
+            let service_path = dirs::home_dir()
+                .map(|h| h.join(".config/systemd/user/summon.service"));
+            if service_path.map(|p| p.exists()).unwrap_or(false) {
+                println!("서비스: systemd 등록됨 (Linux)");
+            } else {
+                println!("서비스: 미등록");
+            }
+        }
+        _ => {}
+    }
+
+    // 5. 라우트 목록
     println!();
     if std::path::Path::new(config_path).exists() {
         match Config::load(config_path) {
@@ -454,6 +535,221 @@ fn status(config_path: &str) {
     println!("  config.yaml:   {}", config_path);
     println!("  PID 파일:      {}", pid_file_path().display());
     println!("  로그 파일:     {}", log_file_path().display());
+}
+
+// ── service install / uninstall ──
+
+#[derive(Debug, Clone, Copy)]
+enum Platform {
+    MacOS,
+    Linux,
+    #[allow(dead_code)]
+    Windows,
+    Unknown,
+}
+
+fn detect_platform() -> Platform {
+    match std::env::consts::OS {
+        "macos" => Platform::MacOS,
+        "linux" => Platform::Linux,
+        "windows" => Platform::Windows,
+        _ => Platform::Unknown,
+    }
+}
+
+/// 서비스 설치 (enable 시 자동 호출 또는 수동 실행)
+fn install_service(config_path: &str) {
+    let platform = detect_platform();
+
+    match platform {
+        Platform::MacOS => install_macos_launchagent(config_path),
+        Platform::Linux => install_linux_systemd(config_path),
+        Platform::Windows => {
+            eprintln!("Windows 서비스 등록은 PowerShell 스크립트를 사용하세요:");
+            eprintln!("  irm https://raw.githubusercontent.com/TheMagicTower/summon/main/install.ps1 | iex");
+        }
+        Platform::Unknown => {
+            eprintln!("지원되지 않는 플랫폼입니다.");
+        }
+    }
+}
+
+/// 서비스 제거 (disable 시 자동 호출 또는 수동 실행)
+fn uninstall_service() {
+    let platform = detect_platform();
+
+    match platform {
+        Platform::MacOS => uninstall_macos_launchagent(),
+        Platform::Linux => uninstall_linux_systemd(),
+        Platform::Windows => {
+            eprintln!("Windows 서비스 제거는 관리자 권한 PowerShell에서:");
+            eprintln!("  sc delete Summon");
+        }
+        Platform::Unknown => {
+            eprintln!("지원되지 않는 플랫폼입니다.");
+        }
+    }
+}
+
+fn install_macos_launchagent(config_path: &str) {
+    let plist_dir = dirs::home_dir()
+        .expect("홈 디렉토리를 찾을 수 없습니다")
+        .join("Library/LaunchAgents");
+    let plist_path = plist_dir.join("com.themagictower.summon.plist");
+
+    fs::create_dir_all(&plist_dir).expect("LaunchAgents 디렉토리 생성 실패");
+
+    let exe_path = current_exe_path();
+    let config_abs = fs::canonicalize(config_path).unwrap_or_else(|_| PathBuf::from(config_path));
+    let log_dir = dirs::home_dir().unwrap().join(".local/share/summon");
+    fs::create_dir_all(&log_dir).ok();
+
+    let plist_content = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.themagictower.summon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{}</string>
+        <string>--config</string>
+        <string>{}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>{}/summon.log</string>
+    <key>StandardErrorPath</key>
+    <string>{}/summon.error.log</string>
+</dict>
+</plist>"#,
+        exe_path.display(),
+        config_abs.display(),
+        log_dir.display(),
+        log_dir.display()
+    );
+
+    fs::write(&plist_path, plist_content).expect("plist 파일 저장 실패");
+
+    // 기존 서비스가 있으면 unload
+    let _ = Command::new("launchctl").args(["unload", &plist_path.to_string_lossy()]).output();
+    // 새 서비스 load
+    let output = Command::new("launchctl")
+        .args(["load", &plist_path.to_string_lossy()])
+        .output();
+
+    match output {
+        Ok(result) if result.status.success() => {
+            println!("✅ macOS LaunchAgent 등록 완료");
+            println!("   plist: {}", plist_path.display());
+            println!("   로그: {}/", log_dir.display());
+        }
+        Ok(result) => {
+            eprintln!("⚠️  LaunchAgent 등록 실패: {}", String::from_utf8_lossy(&result.stderr));
+        }
+        Err(e) => {
+            eprintln!("⚠️  launchctl 실행 실패: {}", e);
+        }
+    }
+}
+
+fn uninstall_macos_launchagent() {
+    let plist_path = dirs::home_dir()
+        .expect("홈 디렉토리를 찾을 수 없습니다")
+        .join("Library/LaunchAgents/com.themagictower.summon.plist");
+
+    if !plist_path.exists() {
+        println!("등록된 LaunchAgent가 없습니다.");
+        return;
+    }
+
+    let _ = Command::new("launchctl")
+        .args(["unload", &plist_path.to_string_lossy()])
+        .output();
+
+    fs::remove_file(&plist_path).ok();
+    println!("✅ macOS LaunchAgent 제거 완료");
+}
+
+fn install_linux_systemd(config_path: &str) {
+    let service_dir = dirs::home_dir()
+        .expect("홈 디렉토리를 찾을 수 없습니다")
+        .join(".config/systemd/user");
+    let service_path = service_dir.join("summon.service");
+
+    fs::create_dir_all(&service_dir).expect("systemd 디렉토리 생성 실패");
+
+    let exe_path = current_exe_path();
+    let config_abs = fs::canonicalize(config_path).unwrap_or_else(|_| PathBuf::from(config_path));
+
+    let service_content = format!(
+        r#"[Unit]
+Description=Summon LLM Proxy
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={} --config {}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+"#,
+        exe_path.display(),
+        config_abs.display()
+    );
+
+    fs::write(&service_path, service_content).expect("service 파일 저장 실패");
+
+    // systemd reload, enable, start
+    let commands = [
+        vec!["--user", "daemon-reload"],
+        vec!["--user", "enable", "summon.service"],
+        vec!["--user", "start", "summon.service"],
+    ];
+
+    for args in commands {
+        let output = Command::new("systemctl").args(&args).output();
+        if let Err(e) = output {
+            eprintln!("⚠️  systemctl {:?} 실패: {}", args, e);
+        }
+    }
+
+    println!("✅ systemd 사용자 서비스 등록 완료");
+    println!("   service: {}", service_path.display());
+    println!("   관리: systemctl --user {{start|stop|status|restart}} summon");
+}
+
+fn uninstall_linux_systemd() {
+    let service_path = dirs::home_dir()
+        .expect("홈 디렉토리를 찾을 수 없습니다")
+        .join(".config/systemd/user/summon.service");
+
+    if !service_path.exists() {
+        println!("등록된 systemd 서비스가 없습니다.");
+        return;
+    }
+
+    let _ = Command::new("systemctl")
+        .args(["--user", "stop", "summon.service"])
+        .output();
+
+    let _ = Command::new("systemctl")
+        .args(["--user", "disable", "summon.service"])
+        .output();
+
+    fs::remove_file(&service_path).ok();
+
+    let _ = Command::new("systemctl")
+        .args(["--user", "daemon-reload"])
+        .output();
+
+    println!("✅ systemd 사용자 서비스 제거 완료");
 }
 
 // ── restore ──
