@@ -320,8 +320,8 @@ main() {
             echo "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
             echo ""
 
-            read -rp "  Kimi API 키: " KIMI_KEY
-            read -rp "  Z.AI (GLM) API 키: " GLM_KEY
+            read -rp "  Kimi API 키: " KIMI_KEY < /dev/tty
+            read -rp "  Z.AI (GLM) API 키: " GLM_KEY < /dev/tty
         fi
 
         # routes 생성
@@ -392,7 +392,7 @@ EOF
             HAIKU_GLM_IDX=$HAIKU_IDX
             HAIKU_IDX=$((HAIKU_IDX + 1))
         fi
-        read -rp "선택 (1): " HAIKU_CHOICE
+        read -rp "선택 (1): " HAIKU_CHOICE < /dev/tty
         HAIKU_CHOICE="${HAIKU_CHOICE:-1}"
 
         if [ "$HAIKU_CHOICE" != "1" ]; then
@@ -423,7 +423,7 @@ EOF
             SONNET_GLM_IDX=$SONNET_IDX
             SONNET_IDX=$((SONNET_IDX + 1))
         fi
-        read -rp "선택 (1): " SONNET_CHOICE
+        read -rp "선택 (1): " SONNET_CHOICE < /dev/tty
         SONNET_CHOICE="${SONNET_CHOICE:-1}"
 
         if [ "$SONNET_CHOICE" != "1" ]; then
@@ -474,7 +474,7 @@ EOF
         echo ""
         echo "🔧 백그라운드 서비스로 등록하시겠습니까?"
         echo "   이 설정은 부팅 시 자동으로 summon을 시작하고, 종료 시 자동으로 재시작합니다."
-        read -rp "   서비스로 등록하시겠습니까? (y/N): " INSTALL_SERVICE
+        read -rp "   서비스로 등록하시겠습니까? (y/N): " INSTALL_SERVICE < /dev/tty
 
         if [[ "$INSTALL_SERVICE" =~ ^[Yy]$ ]]; then
             OS_TYPE=$(detect_os_type)
