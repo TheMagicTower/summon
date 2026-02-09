@@ -316,12 +316,34 @@ main() {
             GLM_KEY=""
         else
             echo ""
-            echo "=== API 키 설정 ==="
-            echo "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
+            echo "=== 외부 LLM 프로바이더 설정 ==="
+            echo "Claude Code의 요청을 외부 LLM으로 라우팅할 수 있습니다."
+            echo "사용할 프로바이더를 선택하세요:"
             echo ""
+            echo "  1) Kimi (Moonshot AI - kimi.com)"
+            echo "  2) Z.AI (GLM - z.ai)"
+            echo "  3) 모두 설정"
+            echo "  4) 건너뛰기"
+            echo ""
+            read -rp "선택 (4): " PROVIDER_CHOICE < /dev/tty
+            PROVIDER_CHOICE="${PROVIDER_CHOICE:-4}"
 
-            read -rp "  Kimi API 키: " KIMI_KEY < /dev/tty
-            read -rp "  Z.AI (GLM) API 키: " GLM_KEY < /dev/tty
+            case "$PROVIDER_CHOICE" in
+                1)
+                    read -rp "  Kimi API 키: " KIMI_KEY < /dev/tty
+                    ;;
+                2)
+                    read -rp "  Z.AI (GLM) API 키: " GLM_KEY < /dev/tty
+                    ;;
+                3)
+                    read -rp "  Kimi API 키: " KIMI_KEY < /dev/tty
+                    read -rp "  Z.AI (GLM) API 키: " GLM_KEY < /dev/tty
+                    ;;
+                *)
+                    KIMI_KEY=""
+                    GLM_KEY=""
+                    ;;
+            esac
         fi
 
         # routes 생성

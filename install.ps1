@@ -150,12 +150,34 @@ try {
             $GlmKey = ""
         } else {
             Write-Host ""
-            Write-Host "=== API 키 설정 ==="
-            Write-Host "외부 LLM 프로바이더의 API 키를 입력하세요. (Enter로 건너뛰기)"
+            Write-Host "=== 외부 LLM 프로바이더 설정 ==="
+            Write-Host "Claude Code의 요청을 외부 LLM으로 라우팅할 수 있습니다."
+            Write-Host "사용할 프로바이더를 선택하세요:"
             Write-Host ""
+            Write-Host "  1) Kimi (Moonshot AI - kimi.com)"
+            Write-Host "  2) Z.AI (GLM - z.ai)"
+            Write-Host "  3) 모두 설정"
+            Write-Host "  4) 건너뛰기"
+            Write-Host ""
+            $ProviderChoice = Read-Host "선택 (4)"
+            if (-not $ProviderChoice) { $ProviderChoice = "4" }
 
-            $KimiKey = Read-Host "  Kimi API 키"
-            $GlmKey = Read-Host "  Z.AI (GLM) API 키"
+            switch ($ProviderChoice) {
+                "1" {
+                    $KimiKey = Read-Host "  Kimi API 키"
+                }
+                "2" {
+                    $GlmKey = Read-Host "  Z.AI (GLM) API 키"
+                }
+                "3" {
+                    $KimiKey = Read-Host "  Kimi API 키"
+                    $GlmKey = Read-Host "  Z.AI (GLM) API 키"
+                }
+                default {
+                    $KimiKey = ""
+                    $GlmKey = ""
+                }
+            }
         }
 
         # routes 생성
