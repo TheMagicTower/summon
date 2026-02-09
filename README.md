@@ -1,6 +1,6 @@
-# Claude Code Model Router
+# Summon
 
-Claude Code의 API 요청을 모델명 기반으로 다른 LLM 제공자에게 라우팅하는 Rust 경량 리버스 프록시.
+모델명 기반으로 Claude Code의 API 요청을 다른 LLM 제공자에게 라우팅하는 Rust 경량 리버스 프록시.
 
 기존 Anthropic 구독(OAuth) 인증을 유지하면서 특정 모델만 외부 제공자(Z.AI, Kimi 등)로 분기합니다.
 
@@ -8,7 +8,7 @@ Claude Code의 API 요청을 모델명 기반으로 다른 LLM 제공자에게 �
 
 ```
 Claude Code CLI
-  │ ANTHROPIC_BASE_URL=http://127.0.0.1:8080
+  │ ANTHROPIC_BASE_URL=http://127.0.0.1:18081
   ▼
 프록시 (axum 서버)
   ├─ /v1/messages POST → model 필드 파싱 → 라우팅 결정
@@ -21,20 +21,20 @@ Claude Code CLI
 
 ### 바이너리 다운로드
 
-[Releases](https://github.com/TheMagicTower/claude-code-model-router/releases) 페이지에서 플랫폼에 맞는 바이너리를 다운로드하세요.
+[Releases](https://github.com/TheMagicTower/summon/releases) 페이지에서 플랫폼에 맞는 바이너리를 다운로드하세요.
 
 | 플랫폼 | 파일 |
 |--------|------|
-| Linux x86_64 | `claude-code-model-router-linux-amd64.tar.gz` |
-| Linux ARM64 | `claude-code-model-router-linux-arm64.tar.gz` |
-| macOS Intel | `claude-code-model-router-darwin-amd64.tar.gz` |
-| macOS Apple Silicon | `claude-code-model-router-darwin-arm64.tar.gz` |
+| Linux x86_64 | `summon-linux-amd64.tar.gz` |
+| Linux ARM64 | `summon-linux-arm64.tar.gz` |
+| macOS Intel | `summon-darwin-amd64.tar.gz` |
+| macOS Apple Silicon | `summon-darwin-arm64.tar.gz` |
 
 ```bash
 # 예: macOS Apple Silicon
-tar xzf claude-code-model-router-darwin-arm64.tar.gz
-chmod +x claude-code-model-router-darwin-arm64
-sudo mv claude-code-model-router-darwin-arm64 /usr/local/bin/claude-code-model-router
+tar xzf summon-darwin-arm64.tar.gz
+chmod +x summon-darwin-arm64
+sudo mv summon-darwin-arm64 /usr/local/bin/summon
 ```
 
 ### 소스에서 빌드
@@ -50,7 +50,7 @@ cargo build --release
 ```yaml
 server:
   host: "127.0.0.1"
-  port: 8080
+  port: 18081
 
 default:
   url: "https://api.anthropic.com"
@@ -83,10 +83,10 @@ export Z_AI_API_KEY="your-z-ai-key"
 export KIMI_API_KEY="your-kimi-key"
 
 # 프록시 시작
-claude-code-model-router --config config.yaml
+summon --config config.yaml
 
 # Claude Code 연동
-ANTHROPIC_BASE_URL=http://127.0.0.1:8080 claude
+ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 ```
 
 ## 주요 기능

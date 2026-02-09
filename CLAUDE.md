@@ -1,0 +1,86 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## 프로젝트 개요
+
+Claude Code의 API 요청을 모델명 기반으로 다른 LLM 제공자에게 라우팅하는 Rust 경량 리버스 프록시.
+Anthropic 구독(OAuth) 인증을 유지하면서 특정 모델만 외부 제공자(Z.AI, Kimi 등)로 분기한다.
+
+스펙 문서: `SPEC.md`
+
+## 기술 스택
+
+- **언어**: Rust (stable)
+- **HTTP 프레임워크**: axum 0.8
+- **HTTP 클라이언트**: hyper-util (legacy Client) + hyper-tls
+- **런타임**: tokio
+- **설정**: serde + serde_yaml (`config.yaml`)
+- **로깅**: tracing + tracing-subscriber
+
+## 빌드 및 실행
+
+```bash
+# 빌드
+cargo build --release
+
+# 실행 (config.yaml 필요)
+./target/release/summon --config config.yaml
+
+# 테스트
+cargo test
+
+# Claude Code 연동
+ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+## 아키텍처
+
+```
+Claude Code CLI
+  │ ANTHROPIC_BASE_URL=http://127.0.0.1:{PORT}
+  ▼
+프록시 (axum 서버)
+  ├─ /v1/messages POST → model 필드 파싱 → 라우팅 결정
+  │   ├─ 매칭 → 외부 제공자 (헤더/인증 교체)
+  │   └─ 미매칭 → Anthropic API (패스스루)
+  └─ 그 외 요청 → Anthropic API (패스스루)
+```
+
+### 소스 구조
+
+```
+src/
+├── main.rs      # 엔트리포인트, --config CLI 인자, AppState, axum 서버 시작
+├── config.rs    # Config 구조체, YAML 로드, ${ENV_VAR} 치환, find_route 모델 매칭
+└── proxy.rs     # 프록시 핸들러, 패스스루/라우팅 포워딩, SSE 스트리밍
+```
+
+### 핵심 흐름
+
+1. `/v1/messages` POST만 본문 파싱하여 `model` 필드 추출
+2. `config.yaml`의 `routes`를 순서대로 순회, `match` 문자열 포함 여부로 매칭
+3. 매칭 시 해당 upstream URL + auth 헤더로 교체하여 포워딩
+4. 미매칭 시 원본 헤더 그대로 Anthropic API로 패스스루
+5. SSE 스트리밍은 hyper 응답 Body를 그대로 반환 (별도 처리 불필요)
+
+### 설정 파일 (`config.yaml`)
+
+- `server.host` / `server.port`: 바인딩 주소
+- `default.url`: 기본 업스트림 (Anthropic API)
+- `routes[].match`: 모델명 부분 문자열 매칭 (위→아래 순서, 첫 매칭 적용)
+- `routes[].upstream.auth`: `header` + `value` (환경변수 `${VAR}` 참조 지원)
+
+## 개발 규칙
+
+- 모든 문서, 주석, 커밋 메시지는 한국어로 작성
+- 커밋 접두사: `feat:`, `fix:`, `chore:`, `docs:`
+- `127.0.0.1`에만 바인딩 — 외부 노출 금지
+- API 키는 설정 파일에 직접 기입하지 않고 환경변수 참조
+- OAuth 토큰 갱신 등 인증 관련 요청은 반드시 Anthropic API로 패스스루
+
+## 버전 로드맵
+
+- **v0.1 (MVP)**: 패스스루 + 모델 기반 라우팅 + SSE 스트리밍
+- **v0.2**: 트랜스포머 (요청/응답 변환 — 비호환 제공자 지원)
+- **v0.3**: 로깅, 헬스체크, 핫 리로드, 타임아웃
