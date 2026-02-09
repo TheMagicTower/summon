@@ -82,6 +82,7 @@ function Update-SettingsJson {
 # 메인 설치
 Write-Host "🔮 Summon 설치 중..."
 
+$TempDir = $null
 try {
     $Platform = Detect-Platform
     $Version = Get-LatestVersion
