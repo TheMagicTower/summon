@@ -1,25 +1,25 @@
 # Summon
 
-모델명 기반으로 Claude Code의 API 요청을 다른 LLM 제공자에게 라우팅하는 Rust 경량 리버스 프록시.
+A lightweight reverse proxy in Rust that routes Claude Code API requests to different LLM providers based on model name.
 
-기존 Anthropic 구독(OAuth) 인증을 유지하면서 특정 모델만 외부 제공자(Z.AI, Kimi 등)로 분기합니다.
+Maintains your existing Anthropic subscription (OAuth) authentication while branching specific models to external providers (Z.AI, Kimi, etc.).
 
-## 아키텍처
+## Architecture
 
 ```
 Claude Code CLI
   │ ANTHROPIC_BASE_URL=http://127.0.0.1:18081
   ▼
-프록시 (axum 서버)
-  ├─ /v1/messages POST → model 필드 파싱 → 라우팅 결정
-  │   ├─ 매칭 → 외부 제공자 (헤더/인증 교체)
-  │   └─ 미매칭 → Anthropic API (패스스루)
-  └─ 그 외 요청 → Anthropic API (패스스루)
+Proxy (axum server)
+  ├─ /v1/messages POST → model field parsing → routing decision
+  │   ├─ Match → External provider (header/auth replacement)
+  │   └─ No match → Anthropic API (passthrough)
+  └─ Other requests → Anthropic API (passthrough)
 ```
 
-## 설치
+## Installation
 
-### 원라인 설치 (권장)
+### One-line Installation (Recommended)
 
 **Linux/macOS/WSL:**
 ```bash
@@ -31,14 +31,14 @@ curl -fsSL https://raw.githubusercontent.com/TheMagicTower/summon/master/install
 irm https://raw.githubusercontent.com/TheMagicTower/summon/master/install.ps1 | iex
 ```
 
-> 💡 **WSL 사용자**: WSL 낸과 Windows측 모두에서 Claude Code를 사용할 수 있습니다. 자세한 내용은 아래 [WSL 사용법](#wsl-사용법) 섹션을 참조하세요.
+> 💡 **WSL Users**: You can use Claude Code from both WSL and Windows sides. See the [WSL Usage](#wsl-usage) section below for details.
 
-### 바이너리 다운로드
+### Binary Download
 
-[Releases](https://github.com/TheMagicTower/summon/releases) 페이지에서 플랫폼에 맞는 바이너리를 다운로드하세요.
+Download the binary for your platform from the [Releases](https://github.com/TheMagicTower/summon/releases) page.
 
-| 플랫폼 | 파일 |
-|--------|------|
+| Platform | File |
+|----------|------|
 | Linux x86_64 | `summon-linux-amd64.tar.gz` |
 | Linux ARM64 | `summon-linux-arm64.tar.gz` |
 | macOS Intel | `summon-darwin-amd64.tar.gz` |
@@ -47,49 +47,49 @@ irm https://raw.githubusercontent.com/TheMagicTower/summon/master/install.ps1 | 
 | Windows ARM64 | `summon-windows-arm64.zip` |
 
 ```bash
-# 예: macOS Apple Silicon
+# Example: macOS Apple Silicon
 tar xzf summon-darwin-arm64.tar.gz
 chmod +x summon-darwin-arm64
 sudo mv summon-darwin-arm64 /usr/local/bin/summon
 ```
 
-### 소스에서 빌드
+### Build from Source
 
 ```bash
 cargo build --release
 ```
 
-## 설정
+## Configuration
 
-### 설정 파일 위치
+### Configuration File Location
 
-summon은 다음 우선순위로 설정 파일을 검색합니다:
+summon searches for configuration files in the following priority order:
 
-| 우선순위 | 위치 | 설명 |
-|---------|------|------|
-| 1 | `--config <경로>` | 명시적 지정 |
-| 2 | `SUMMON_CONFIG` 환경변수 | 환경변수로 지정된 경로 |
-| 3 | `~/.config/summon/config.yaml` | 사용자별 설정 (XDG) |
-| 4 | `/etc/summon/config.yaml` | 시스템 와이드 설정 |
-| 5 | `./config.yaml` | 현재 디렉토리 |
+| Priority | Location | Description |
+|----------|----------|-------------|
+| 1 | `--config <path>` | Explicit specification |
+| 2 | `SUMMON_CONFIG` environment variable | Path specified by environment variable |
+| 3 | `~/.config/summon/config.yaml` | User-specific configuration (XDG) |
+| 4 | `/etc/summon/config.yaml` | System-wide configuration |
+| 5 | `./config.yaml` | Current directory |
 
-### 다중 사용자 환경
+### Multi-user Environment
 
-각 사용자가 자신만의 설정을 사용하려면:
+For each user to have their own configuration:
 ```bash
 mkdir -p ~/.config/summon
 cp /path/to/config.yaml ~/.config/summon/
 ```
 
-시스템 관리자가 기본 설정을 제공하려면:
+For system administrators to provide default configuration:
 ```bash
 sudo mkdir -p /etc/summon
 sudo cp config.yaml /etc/summon/
 ```
 
-### 설정 파일 예시
+### Configuration File Example
 
-`config.yaml` 파일을 생성합니다:
+Create a `config.yaml` file:
 
 ```yaml
 server:
@@ -115,59 +115,59 @@ routes:
         value: "Bearer ${KIMI_API_KEY}"
 ```
 
-- `match`: 모델명에 이 문자열이 포함되면 매칭 (위→아래 순서, 첫 매칭 적용)
-- `${ENV_VAR}`: 환경변수 참조 (API 키를 설정 파일에 직접 기입하지 않음)
-- 매칭되지 않는 모델은 `default.url`(Anthropic API)로 패스스루
+- `match`: Matches if this string is contained in the model name (top to bottom order, first match applies)
+- `${ENV_VAR}`: Environment variable reference (API keys are not written directly in the configuration file)
+- Models that don't match are passed through to `default.url` (Anthropic API)
 
-## 실행
+## Running
 
 ```bash
-# 환경변수 설정
+# Set environment variables
 export Z_AI_API_KEY="your-z-ai-key"
 export KIMI_API_KEY="your-kimi-key"
 
-# 프록시 시작 (설정 파일 자동 검색)
+# Start proxy (configuration file auto-detected)
 summon
 
-# 또는 설정 파일 직접 지정
+# Or specify configuration file directly
 summon --config /path/to/config.yaml
 
-# Claude Code 연동
+# Integrate with Claude Code
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 ```
 
-## WSL 사용법
+## WSL Usage
 
-WSL(Windows Subsystem for Linux)에서도 summon을 사용할 수 있습니다.
+You can also use summon from WSL (Windows Subsystem for Linux).
 
-### WSL 낸에서 Claude Code 사용
+### Using Claude Code from WSL Side
 
 ```bash
-# WSL 터미널에서 (설정 파일을 ~/.config/summon/config.yaml에 배치한 경우)
+# In WSL terminal (assuming config file is placed at ~/.config/summon/config.yaml)
 summon
 
-# 다른 WSL 터미널에서
+# In another WSL terminal
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 ```
 
-### Windows측에서 Claude Code 사용 (WSL에서 summon 실행)
+### Using Claude Code from Windows Side (summon running in WSL)
 
 ```bash
-# WSL에서 summon 실행 (0.0.0.0으로 바인딩하여 Windows에서 접근 가능하도록)
+# Run summon in WSL (bind to 0.0.0.0 to make it accessible from Windows)
 summon
 
-# Windows 터미널(PowerShell/CMD)에서
-# WSL IP 확인: ip addr show eth0 | grep 'inet '
+# In Windows terminal (PowerShell/CMD)
+# Check WSL IP: ip addr show eth0 | grep 'inet '
 ANTHROPIC_BASE_URL=http://$(wsl hostname -I | awk '{print $1}'):18081 claude
 ```
 
-또는 `config.yaml`에서 `server.host`를 `"0.0.0.0"`으로 설정하여 Windows에서 접근할 수 있습니다.
+Alternatively, you can set `server.host` to `"0.0.0.0"` in `config.yaml` to make it accessible from Windows.
 
-## 백그라운드 서비스로 등록
+## Register as Background Service
 
 ### macOS (launchd)
 
-**1. LaunchAgent plist 파일 생성:**
+**1. Create LaunchAgent plist file:**
 
 ```bash
 cat > ~/Library/LaunchAgents/com.themagictower.summon.plist << 'EOF'
@@ -201,7 +201,7 @@ cat > ~/Library/LaunchAgents/com.themagictower.summon.plist << 'EOF'
 EOF
 ```
 
-**2. 로그 디렉토리 생성 및 서비스 등록:**
+**2. Create log directory and register service:**
 
 ```bash
 mkdir -p ~/.local/share/summon
@@ -209,54 +209,54 @@ launchctl load ~/Library/LaunchAgents/com.themagictower.summon.plist
 launchctl start com.themagictower.summon
 ```
 
-**3. 서비스 관리:**
+**3. Service management:**
 
 ```bash
-# 상태 확인
+# Check status
 launchctl list | grep com.themagictower.summon
 
-# 중지
+# Stop
 launchctl stop com.themagictower.summon
 
-# 재시작
+# Restart
 launchctl stop com.themagictower.summon && launchctl start com.themagictower.summon
 
-# 제거
+# Remove
 launchctl unload ~/Library/LaunchAgents/com.themagictower.summon.plist
 rm ~/Library/LaunchAgents/com.themagictower.summon.plist
 ```
 
 ### Windows (Windows Service)
 
-**PowerShell (관리자 권한 필요):**
+**PowerShell (requires administrator privileges):**
 
 ```powershell
-# 1. summon을 Windows Service로 등록 (nssm 사용 권장)
-# nssm 설치: winget install nssm
+# 1. Register summon as Windows Service (nssm recommended)
+# Install nssm: winget install nssm
 
-# 서비스 등록
+# Register service
 nssm install Summon "$env:LOCALAPPDATA\summon\bin\summon.exe"
 nssm set Summon AppParameters "--config `"$env:APPDATA\summon\config.yaml`""
 nssm set Summon DisplayName "Summon LLM Proxy"
 nssm set Summon Start SERVICE_AUTO_START
 
-# 서비스 시작
+# Start service
 Start-Service Summon
 
-# 서비스 관리
-Get-Service Summon      # 상태 확인
-Stop-Service Summon     # 중지
-Restart-Service Summon  # 재시작
-sc delete Summon        # 제거
+# Service management
+Get-Service Summon      # Check status
+Stop-Service Summon     # Stop
+Restart-Service Summon  # Restart
+sc delete Summon        # Remove
 ```
 
-**또는 WinSW 사용:**
+**Or use WinSW:**
 
 ```powershell
-# WinSW 다운로드 및 설정
+# Download and configure WinSW
 # https://github.com/winsw/winsw/releases
 
-# summon-service.xml 생성:
+# Create summon-service.xml:
 @"
 <service>
   <id>summon</id>
@@ -271,14 +271,20 @@ sc delete Summon        # 제거
 </service>
 "@ | Out-File "$env:LOCALAPPDATA\summon\bin\summon-service.xml" -Encoding UTF8
 
-# 서비스 등록 및 시작
+# Register and start service
 winsw install $env:LOCALAPPDATA\summon\bin\summon-service.xml
 winsw start $env:LOCALAPPDATA\summon\bin\summon-service.xml
 ```
 
-### Linux (systemd) - WSL 포함
+### Linux (systemd) - Including WSL
 
-**1. systemd 서비스 파일 생성:**
+The installation script automatically detects the environment and selects the appropriate service type:
+- **User service**: Desktop environment
+- **System service**: Headless server (SSH sessions, etc.)
+
+#### Method 1: User Service (Desktop Environment)
+
+**1. Create systemd service file:**
 
 ```bash
 cat > ~/.config/systemd/user/summon.service << 'EOF'
@@ -298,52 +304,96 @@ WantedBy=default.target
 EOF
 ```
 
-**2. 서비스 등록 및 시작:**
+**2. Register and start service:**
 
 ```bash
-# 사용자 서비스 로드
+# Load user service
 systemctl --user daemon-reload
 systemctl --user enable summon.service
 systemctl --user start summon.service
 
-# 서비스 관리
-systemctl --user status summon    # 상태 확인
-systemctl --user stop summon      # 중지
-systemctl --user restart summon   # 재시작
-systemctl --user disable summon   # 자동 시작 비활성화
+# Service management
+systemctl --user status summon    # Check status
+systemctl --user stop summon      # Stop
+systemctl --user restart summon   # Restart
+systemctl --user disable summon   # Disable auto-start
 ```
 
-> **참고**: WSL2에서 systemd를 사용하려면 `/etc/wsl.conf`에 `[boot] systemd=true` 설정이 필요할 수 있습니다.
+#### Method 2: System Service (Headless Server)
 
-## 주요 기능
+For environments without D-Bus user sessions such as SSH sessions, use a system-level service. **Requires sudo privileges.**
 
-- **투명한 프록시**: Claude Code 입장에서 프록시의 존재를 인식하지 못함
-- **모델 기반 라우팅**: `/v1/messages` POST의 `model` 필드로 라우팅 결정
-- **SSE 스트리밍**: 청크 단위 실시간 패스스루
-- **구독 인증 병행**: Anthropic OAuth 토큰은 그대로 유지, 외부 제공자만 API 키 교체
-- **보안**: `127.0.0.1`에만 바인딩, API 키는 환경변수 참조
+**1. Create systemd service file (requires sudo):**
 
-## ⚠️ 주의사항 (Known Limitations)
+```bash
+sudo tee /etc/systemd/system/summon.service > /dev/null << 'EOF'
+[Unit]
+Description=Summon LLM Proxy
+After=network.target
 
-### 외부 모델로 교체 후 Anthropic thinking 모델 사용 불가
+[Service]
+Type=simple
+User=$(whoami)
+Group=$(id -gn)
+ExecStart=/home/$(whoami)/.local/bin/summon --config /home/$(whoami)/.config/summon/config.yaml
+Restart=always
+RestartSec=5
+Environment="PATH=/home/$(whoami)/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
-**한 번 외부 제공자(Kimi, Z.AI 등)의 모델로 교첼된 대화는 이후 Anthropic의 thinking 모델(Claude Opus, Sonnet 등)에서 이어서 진행할 수 없습니다.**
+[Install]
+WantedBy=multi-user.target
+EOF
+```
 
-이는 시스템 아키텍처상의 제한사항이며 해결할 수 없는 문제입니다:
-- 외부 제공자는 Anthropic의 나이티브 메시지 형식과 완전히 호환되지 않음
-- Thinking 모델은 특정 나이티브 필드와 컨텍스트 구조에 의존
-- 외부 모델의 응답은 thinking 모델이 요구하는 컨텍스트 형식을 충족하지 못함
+**2. Register and start service (requires sudo):**
 
-**권장 사용 방식:**
-- 동일한 대화 세션 내에서 모델을 교체해야 할 경우, 외부 모델 ↔ 외부 모델 간에만 전환하세요
-- Anthropic thinking 모델이 필요한 경우, **새로운 대화를 시작**하세요
+```bash
+# Load system service
+sudo systemctl daemon-reload
+sudo systemctl enable summon.service
+sudo systemctl start summon.service
 
-## 로드맵
+# Service management
+sudo systemctl status summon    # Check status
+sudo systemctl stop summon      # Stop
+sudo systemctl restart summon   # Restart
+sudo systemctl disable summon   # Disable auto-start
 
-- **v0.1** (현재): 패스스루 + 모델 기반 라우팅 + SSE 스트리밍
-- **v0.2**: 트랜스포머 (요청/응답 변환 — 비호환 제공자 지원)
-- **v0.3**: 로깅, 헬스체크, 핫 리로드, 타임아웃
+# View logs
+journalctl -u summon -f
+```
 
-## 라이선스
+> **Note**: To use systemd in WSL2, you may need to set `[boot] systemd=true` in `/etc/wsl.conf`.
+
+## Key Features
+
+- **Transparent Proxy**: Claude Code is unaware of the proxy's existence
+- **Model-based Routing**: Routing decision based on `model` field in `/v1/messages` POST
+- **SSE Streaming**: Real-time passthrough in chunks
+- **Concurrent Subscription Auth**: Anthropic OAuth tokens remain intact, only external providers use API keys
+- **Security**: Binds only to `127.0.0.1`, API keys referenced from environment variables
+
+## ⚠️ Known Limitations
+
+### Cannot Use Anthropic Thinking Models After Switching to External Models
+
+**Once a conversation has been switched to an external provider's model (Kimi, Z.AI, etc.), you cannot continue with Anthropic's thinking models (Claude Opus, Sonnet, etc.) in the same conversation.**
+
+This is a system architecture limitation that cannot be resolved:
+- External providers are not fully compatible with Anthropic's native message format
+- Thinking models depend on specific native fields and context structures
+- External model responses do not meet the context format required by thinking models
+
+**Recommended Usage:**
+- When switching models within the same conversation session, only switch between external models ↔ external models
+- If you need Anthropic thinking models, **start a new conversation**
+
+## Roadmap
+
+- **v0.1** (current): Passthrough + model-based routing + SSE streaming
+- **v0.2**: Transformer (request/response transformation — for incompatible providers)
+- **v0.3**: Logging, health check, hot reload, timeout
+
+## License
 
 MIT
