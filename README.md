@@ -19,6 +19,18 @@ Claude Code CLI
 
 ## 설치
 
+### 원라인 설치 (권장)
+
+**Linux/macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/TheMagicTower/summon/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/TheMagicTower/summon/main/install.ps1 | iex
+```
+
 ### 바이너리 다운로드
 
 [Releases](https://github.com/TheMagicTower/summon/releases) 페이지에서 플랫폼에 맞는 바이너리를 다운로드하세요.

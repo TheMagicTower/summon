@@ -16,16 +16,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: claude-code-model-router-linux-amd64
+            artifact: summon-linux-amd64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: claude-code-model-router-linux-arm64
+            artifact: summon-linux-arm64
           - target: x86_64-apple-darwin
             os: macos-latest
-            artifact: claude-code-model-router-darwin-amd64
+            artifact: summon-darwin-amd64
           - target: aarch64-apple-darwin
             os: macos-latest
-            artifact: claude-code-model-router-darwin-arm64
+            artifact: summon-darwin-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -60,7 +60,7 @@ jobs:
 
       - name: 바이너리 패키징
         run: |
-          cp "target/${TARGET}/release/claude-code-model-router" "${ARTIFACT}"
+          cp "target/${TARGET}/release/summon" "${ARTIFACT}"
           chmod +x "${ARTIFACT}"
           tar czf "${ARTIFACT}.tar.gz" "${ARTIFACT}"
         env:
