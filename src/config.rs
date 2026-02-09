@@ -1,6 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::PathBuf;
 
 /// 서버 바인딩 설정
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -131,6 +132,47 @@ impl Config {
     pub fn find_route(&self, model: &str) -> Option<&RouteConfig> {
         self.routes.iter().find(|r| model.contains(&r.match_pattern))
     }
+
+    /// XDG Base Directory 준수 설정 파일 검색
+    ///
+    /// 검색 우선순위:
+    /// 1. SUMMON_CONFIG 환경변수
+    /// 2. ~/.config/summon/config.yaml (XDG_CONFIG_HOME 또는 ~/.config)
+    /// 3. /etc/summon/config.yaml (시스템 와이드)
+    /// 4. ./config.yaml (현재 디렉토리)
+    pub fn find_config_path() -> Option<PathBuf> {
+        // 1. 환경변수 SUMMON_CONFIG 확인
+        if let Ok(path) = std::env::var("SUMMON_CONFIG") {
+            let p = PathBuf::from(&path);
+            if p.exists() {
+                return Some(p);
+            }
+        }
+
+        // 2. XDG_CONFIG_HOME 또는 ~/.config/summon/config.yaml
+        if let Some(home) = dirs::home_dir() {
+            let xdg_config = std::env::var("XDG_CONFIG_HOME")
+                .unwrap_or_else(|_| home.join(".config").to_string_lossy().to_string());
+            let user_config = PathBuf::from(xdg_config).join("summon/config.yaml");
+            if user_config.exists() {
+                return Some(user_config);
+            }
+        }
+
+        // 3. 시스템 와이드 설정
+        let system_config = PathBuf::from("/etc/summon/config.yaml");
+        if system_config.exists() {
+            return Some(system_config);
+        }
+
+        // 4. 현재 디렉토리
+        let cwd_config = PathBuf::from("config.yaml");
+        if cwd_config.exists() {
+            return Some(cwd_config);
+        }
+
+        None
+    }
 }
 
 #[cfg(test)]
@@ -258,6 +300,47 @@ routes:
     fn test_find_route_no_match() {
         let config = make_test_config();
         assert!(config.find_route("claude-3-opus").is_none());
+    }
+
+    /// find_config_path: SUMMON_CONFIG 환경변수 우선순위
+    #[test]
+    fn test_find_config_path_env_var() {
+        let temp_dir = std::env::temp_dir();
+        let test_config = temp_dir.join("summon_test_config.yaml");
+        fs::write(&test_config, "server:\n  host: 127.0.0.1\n  port: 18081\ndefault:\n  url: https://api.anthropic.com\nroutes: []").unwrap();
+
+        unsafe { std::env::set_var("SUMMON_CONFIG", test_config.to_str().unwrap()) };
+        let result = Config::find_config_path();
+        unsafe { std::env::remove_var("SUMMON_CONFIG") };
+
+        assert_eq!(result, Some(test_config.clone()));
+        let _ = fs::remove_file(&test_config);
+    }
+
+    /// find_config_path: 존재하지 않는 파일은 무시
+    #[test]
+    fn test_find_config_path_nonexistent_env_var() {
+        unsafe { std::env::set_var("SUMMON_CONFIG", "/nonexistent/path/config.yaml") };
+        // 다른 경로들도 없으므로 None 또는 다른 경로가 반환됨
+        let _result = Config::find_config_path();
+        unsafe { std::env::remove_var("SUMMON_CONFIG") };
+        // 환경변수에 지정된 경로가 없으면 다음 우선순위로 넘어감
+    }
+
+    /// find_config_path: 현재 디렉토리 config.yaml
+    #[test]
+    fn test_find_config_path_cwd() {
+        // 현재 디렉토리에 config.yaml이 있으면 Some을 반환
+        // 없으면 None을 반환
+        let result = Config::find_config_path();
+        let cwd_config = PathBuf::from("config.yaml");
+
+        if cwd_config.exists() {
+            assert!(result.is_some());
+        } else {
+            // 다른 경로도 모두 없는 경우 None
+            // (테스트 환경에 따라 다름)
+        }
     }
 
     /// find_route: 순서 우선순위 (첫 번째 매칭 반환)

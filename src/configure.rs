@@ -109,6 +109,31 @@ fn current_exe_path() -> PathBuf {
     std::env::current_exe().expect("실행 파일 경로를 찾을 수 없습니다")
 }
 
+/// 설정 파일 경로를 절대 경로로 변환
+/// - 이미 절대 경로면 그대로 반환
+/// - 상대 경로면 canonicalize 시도, 실패하면 현재 디렉토리 기준으로 절대 경로 생성
+fn resolve_config_path(config_path: &str) -> PathBuf {
+    let path = PathBuf::from(config_path);
+
+    // 이미 절대 경로면 그대로 반환
+    if path.is_absolute() {
+        return path;
+    }
+
+    // canonicalize 시도 (파일이 존재하고 접근 가능한 경우)
+    if let Ok(canonical) = fs::canonicalize(&path) {
+        return canonical;
+    }
+
+    // canonicalize 실패 시 (파일이 없거나 접근 불가), 현재 디렉토리 기준으로 절대 경로 생성
+    if let Ok(cwd) = std::env::current_dir() {
+        return cwd.join(&path);
+    }
+
+    // 최후의 수단: 원래 경로 반환
+    path
+}
+
 // ── 디스패치 ──
 
 pub fn run(action: &str, config_path: &str) {
@@ -142,7 +167,8 @@ fn start(config_path: &str) {
     }
 
     let exe = current_exe_path();
-    let config_abs = fs::canonicalize(config_path).unwrap_or_else(|_| PathBuf::from(config_path));
+    // 설정 파일 경로를 절대 경로로 변환
+    let config_abs = resolve_config_path(config_path);
     let log_path = log_file_path();
 
     let log_file = fs::OpenOptions::new()
@@ -530,9 +556,10 @@ fn status(config_path: &str) {
     }
 
     // 5. 경로 정보
+    let config_abs = resolve_config_path(config_path);
     println!("\n경로:");
     println!("  settings.json: {}", settings_json_path().display());
-    println!("  config.yaml:   {}", config_path);
+    println!("  config.yaml:   {}", config_abs.display());
     println!("  PID 파일:      {}", pid_file_path().display());
     println!("  로그 파일:     {}", log_file_path().display());
 }
@@ -600,7 +627,7 @@ fn install_macos_launchagent(config_path: &str) {
     fs::create_dir_all(&plist_dir).expect("LaunchAgents 디렉토리 생성 실패");
 
     let exe_path = current_exe_path();
-    let config_abs = fs::canonicalize(config_path).unwrap_or_else(|_| PathBuf::from(config_path));
+    let config_abs = resolve_config_path(config_path);
     let log_dir = dirs::home_dir().unwrap().join(".local/share/summon");
     fs::create_dir_all(&log_dir).ok();
 
@@ -684,7 +711,7 @@ fn install_linux_systemd(config_path: &str) {
     fs::create_dir_all(&service_dir).expect("systemd 디렉토리 생성 실패");
 
     let exe_path = current_exe_path();
-    let config_abs = fs::canonicalize(config_path).unwrap_or_else(|_| PathBuf::from(config_path));
+    let config_abs = resolve_config_path(config_path);
 
     let service_content = format!(
         r#"[Unit]

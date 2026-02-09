@@ -59,6 +59,34 @@ cargo build --release
 
 ## 설정
 
+### 설정 파일 위치
+
+summon은 다음 우선순위로 설정 파일을 검색합니다:
+
+| 우선순위 | 위치 | 설명 |
+|---------|------|------|
+| 1 | `--config <경로>` | 명시적 지정 |
+| 2 | `SUMMON_CONFIG` 환경변수 | 환경변수로 지정된 경로 |
+| 3 | `~/.config/summon/config.yaml` | 사용자별 설정 (XDG) |
+| 4 | `/etc/summon/config.yaml` | 시스템 와이드 설정 |
+| 5 | `./config.yaml` | 현재 디렉토리 |
+
+### 다중 사용자 환경
+
+각 사용자가 자신만의 설정을 사용하려면:
+```bash
+mkdir -p ~/.config/summon
+cp /path/to/config.yaml ~/.config/summon/
+```
+
+시스템 관리자가 기본 설정을 제공하려면:
+```bash
+sudo mkdir -p /etc/summon
+sudo cp config.yaml /etc/summon/
+```
+
+### 설정 파일 예시
+
 `config.yaml` 파일을 생성합니다:
 
 ```yaml
@@ -96,8 +124,11 @@ routes:
 export Z_AI_API_KEY="your-z-ai-key"
 export KIMI_API_KEY="your-kimi-key"
 
-# 프록시 시작
-summon --config config.yaml
+# 프록시 시작 (설정 파일 자동 검색)
+summon
+
+# 또는 설정 파일 직접 지정
+summon --config /path/to/config.yaml
 
 # Claude Code 연동
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
@@ -110,8 +141,8 @@ WSL(Windows Subsystem for Linux)에서도 summon을 사용할 수 있습니다.
 ### WSL 낸에서 Claude Code 사용
 
 ```bash
-# WSL 터미널에서
-summon --config ~/.config/summon/config.yaml
+# WSL 터미널에서 (설정 파일을 ~/.config/summon/config.yaml에 배치한 경우)
+summon
 
 # 다른 WSL 터미널에서
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
@@ -121,7 +152,7 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 
 ```bash
 # WSL에서 summon 실행 (0.0.0.0으로 바인딩하여 Windows에서 접근 가능하도록)
-summon --config ~/.config/summon/config.yaml
+summon
 
 # Windows 터미널(PowerShell/CMD)에서
 # WSL IP 확인: ip addr show eth0 | grep 'inet '

@@ -26,9 +26,9 @@ pub struct AppState {
 #[derive(Parser)]
 #[command(name = "claude-code-model-router", version)]
 struct Cli {
-    /// 설정 파일 경로
-    #[arg(long, default_value = "config.yaml")]
-    config: String,
+    /// 설정 파일 경로 (지정하지 않으면 자동 검색)
+    #[arg(long)]
+    config: Option<String>,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -67,6 +67,25 @@ enum ConfigureAction {
 async fn main() {
     let cli = Cli::parse();
 
+    // 설정 파일 경로 해결
+    let config_path = match cli.config {
+        Some(path) => path,
+        None => {
+            match Config::find_config_path() {
+                Some(path) => path.to_string_lossy().to_string(),
+                None => {
+                    eprintln!("설정 파일을 찾을 수 없습니다.");
+                    eprintln!("다음 위치 중 하나에 config.yaml을 배치하세요:");
+                    eprintln!("  - ~/.config/summon/config.yaml");
+                    eprintln!("  - /etc/summon/config.yaml");
+                    eprintln!("  - ./config.yaml");
+                    eprintln!("또는 --config <경로>로 지정하세요.");
+                    std::process::exit(1);
+                }
+            }
+        }
+    };
+
     match cli.command {
         Some(Commands::Configure { action }) => {
             let action_str = match action {
@@ -79,11 +98,11 @@ async fn main() {
                 ConfigureAction::Status => "status",
                 ConfigureAction::Restore => "restore",
             };
-            configure::run(action_str, &cli.config);
+            configure::run(action_str, &config_path);
         }
         None => {
             // 기존 프록시 서버 실행
-            run_server(&cli.config).await;
+            run_server(&config_path).await;
         }
     }
 }
