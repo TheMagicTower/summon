@@ -43,6 +43,8 @@ irm https://raw.githubusercontent.com/TheMagicTower/summon/main/install.ps1 | ie
 | Linux ARM64 | `summon-linux-arm64.tar.gz` |
 | macOS Intel | `summon-darwin-amd64.tar.gz` |
 | macOS Apple Silicon | `summon-darwin-arm64.tar.gz` |
+| Windows x86_64 | `summon-windows-amd64.zip` |
+| Windows ARM64 | `summon-windows-arm64.zip` |
 
 ```bash
 # 예: macOS Apple Silicon

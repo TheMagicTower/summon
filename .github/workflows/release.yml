@@ -26,6 +26,12 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             artifact: summon-darwin-arm64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact: summon-windows-amd64
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            artifact: summon-windows-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -53,12 +59,21 @@ jobs:
             target
           key: ${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
 
-      - name: 릴리즈 빌드
+      - name: 릴리즈 빌드 (Unix)
+        if: runner.os != 'Windows'
         run: cargo build --release --target "$TARGET"
         env:
           TARGET: ${{ matrix.target }}
 
-      - name: 바이너리 패키징
+      - name: 릴리즈 빌드 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cargo build --release --target $env:TARGET
+        env:
+          TARGET: ${{ matrix.target }}
+
+      - name: 바이너리 패키징 (Unix)
+        if: runner.os != 'Windows'
         run: |
           cp "target/${TARGET}/release/summon" "${ARTIFACT}"
           chmod +x "${ARTIFACT}"
@@ -67,11 +82,29 @@ jobs:
           TARGET: ${{ matrix.target }}
           ARTIFACT: ${{ matrix.artifact }}
 
-      - name: 아티팩트 업로드
+      - name: 바이너리 패키징 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "target\$env:TARGET\release\summon.exe" "$env:ARTIFACT.exe"
+          Compress-Archive -Path "$env:ARTIFACT.exe" -DestinationPath "$env:ARTIFACT.zip"
+        env:
+          TARGET: ${{ matrix.target }}
+          ARTIFACT: ${{ matrix.artifact }}
+
+      - name: 아티팩트 업로드 (Unix)
+        if: runner.os != 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}.tar.gz
+
+      - name: 아티팩트 업로드 (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.zip
 
   release:
     needs: build
@@ -87,4 +120,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: "*.tar.gz"
+          files: |
+            *.tar.gz
+            *.zip
