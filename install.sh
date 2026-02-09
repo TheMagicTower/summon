@@ -70,6 +70,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ systemd 서비스 등록 완료"
             MSG_LINUX_COMMANDS="   📋 관리 명령어:"
             MSG_WSL_SYSTEMD="   💡 WSL에서 systemd를 사용하려면 /etc/wsl.conf에 다음 설정이 필요할 수 있습니다:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  사용자 systemd 세션을 사용할 수 없습니다. 대안을 시도합니다..."
+            MSG_LINUX_LINGER_TRYING="   🔄 loginctl enable-linger 시도 중..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 시스템 레벨 systemd 서비스로 설치 중..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  시스템 서비스 설치에 sudo 권한이 필요합니다."
             MSG_VERSION_ERROR="최신 버전 정보를 가져올 수 없습니다."
             ;;
         ja)
@@ -117,6 +121,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ systemd サービス登録完了"
             MSG_LINUX_COMMANDS="   📋 管理コマンド:"
             MSG_WSL_SYSTEMD="   💡 WSL で systemd を使用するには /etc/wsl.conf に以下の設定が必要な場合があります:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  ユーザー systemd セッションが利用できません。代替方法を試みます..."
+            MSG_LINUX_LINGER_TRYING="   🔄 loginctl enable-linger を試行中..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 システムレベル systemd サービスとしてインストール中..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  システムサービスのインストールには sudo 権限が必要です。"
             MSG_VERSION_ERROR="最新バージョン情報を取得できません。"
             ;;
         zh)
@@ -164,6 +172,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ systemd 服务注册完成"
             MSG_LINUX_COMMANDS="   📋 管理命令:"
             MSG_WSL_SYSTEMD="   💡 在 WSL 中使用 systemd 可能需要在 /etc/wsl.conf 中添加以下设置:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  无法使用用户 systemd 会话。正在尝试替代方案..."
+            MSG_LINUX_LINGER_TRYING="   🔄 正在尝试 loginctl enable-linger..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 正在安装系统级 systemd 服务..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  安装系统服务需要 sudo 权限。"
             MSG_VERSION_ERROR="无法获取最新版本信息。"
             ;;
         es)
@@ -211,6 +223,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ Servicio systemd registrado"
             MSG_LINUX_COMMANDS="   📋 Comandos de gestión:"
             MSG_WSL_SYSTEMD="   💡 Para usar systemd en WSL, puede que necesites añadir lo siguiente en /etc/wsl.conf:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  No se puede usar la sesión systemd de usuario. Intentando alternativas..."
+            MSG_LINUX_LINGER_TRYING="   🔄 Intentando loginctl enable-linger..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 Instalando como servicio systemd a nivel de sistema..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  Se requieren permisos sudo para instalar el servicio del sistema."
             MSG_VERSION_ERROR="No se pudo obtener la información de la última versión."
             ;;
         de)
@@ -258,6 +274,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ systemd-Dienst registriert"
             MSG_LINUX_COMMANDS="   📋 Verwaltungsbefehle:"
             MSG_WSL_SYSTEMD="   💡 Für systemd in WSL muss möglicherweise Folgendes in /etc/wsl.conf eingetragen werden:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  Benutzer-systemd-Sitzung nicht verfügbar. Versuche Alternativen..."
+            MSG_LINUX_LINGER_TRYING="   🔄 Versuche loginctl enable-linger..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 Installiere als systemd-Systemdienst..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  Für die Installation des Systemdienstes werden sudo-Rechte benötigt."
             MSG_VERSION_ERROR="Die neueste Version konnte nicht abgerufen werden."
             ;;
         vi)
@@ -305,6 +325,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ Đã đăng ký dịch vụ systemd"
             MSG_LINUX_COMMANDS="   📋 Lệnh quản lý:"
             MSG_WSL_SYSTEMD="   💡 Để sử dụng systemd trong WSL, bạn có thể cần thêm cấu hình sau vào /etc/wsl.conf:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  Không thể sử dụng phiên systemd người dùng. Đang thử phương án thay thế..."
+            MSG_LINUX_LINGER_TRYING="   🔄 Đang thử loginctl enable-linger..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 Đang cài đặt dịch vụ systemd cấp hệ thống..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  Cần quyền sudo để cài đặt dịch vụ hệ thống."
             MSG_VERSION_ERROR="Không thể lấy thông tin phiên bản mới nhất."
             ;;
         en|*)
@@ -352,6 +376,10 @@ set_messages() {
             MSG_LINUX_DONE="   ✅ systemd service registered"
             MSG_LINUX_COMMANDS="   📋 Management commands:"
             MSG_WSL_SYSTEMD="   💡 To use systemd in WSL, you may need to add the following to /etc/wsl.conf:"
+            MSG_LINUX_NO_USER_SESSION="   ⚠️  User systemd session unavailable. Trying alternatives..."
+            MSG_LINUX_LINGER_TRYING="   🔄 Trying loginctl enable-linger..."
+            MSG_LINUX_SYSTEM_INSTALLING="🐧 Installing as system-level systemd service..."
+            MSG_LINUX_SUDO_REQUIRED="   ⚠️  sudo privileges required to install system service."
             MSG_VERSION_ERROR="Could not fetch the latest version information."
             ;;
     esac
@@ -397,6 +425,11 @@ detect_platform() {
 # Get WSL host IP for Windows access
 get_wsl_host_ip() {
     ip route show default | grep -oP '(?<=via )\d+\.\d+\.\d+\.\d+' || echo "127.0.0.1"
+}
+
+# 사용자 systemd 세션 사용 가능 여부 감지
+can_use_user_systemd() {
+    systemctl --user status >/dev/null 2>&1
 }
 
 # Detect OS type for service installation
@@ -464,6 +497,32 @@ EOF
 # Install Linux/WSL systemd user service
 install_linux_service() {
     local config_file="$1"
+
+    if can_use_user_systemd; then
+        install_linux_user_service "$config_file"
+        return
+    fi
+
+    # 사용자 세션 불가 → linger 활성화 시도
+    echo ""
+    echo "$MSG_LINUX_NO_USER_SESSION"
+    echo "$MSG_LINUX_LINGER_TRYING"
+
+    loginctl enable-linger "$(whoami)" 2>/dev/null || true
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+
+    if can_use_user_systemd; then
+        install_linux_user_service "$config_file"
+        return
+    fi
+
+    # linger로도 불가 → 시스템 서비스 폴백
+    install_linux_system_service "$config_file"
+}
+
+# systemd 사용자 서비스 설치 (내부용)
+install_linux_user_service() {
+    local config_file="$1"
     local service_dir="$HOME/.config/systemd/user"
     local service_path="$service_dir/summon.service"
 
@@ -504,6 +563,52 @@ EOF
         echo "      [boot]"
         echo "      systemd=true"
     fi
+}
+
+# systemd 시스템 레벨 서비스 설치 (헤드리스 서버 폴백)
+install_linux_system_service() {
+    local config_file="$1"
+    local service_path="/etc/systemd/system/summon.service"
+    local current_user
+    local current_group
+    current_user="$(whoami)"
+    current_group="$(id -gn)"
+
+    echo ""
+    echo "$MSG_LINUX_SYSTEM_INSTALLING"
+
+    if ! command -v sudo &>/dev/null || ! sudo -n true 2>/dev/null; then
+        echo "$MSG_LINUX_SUDO_REQUIRED"
+    fi
+
+    sudo tee "$service_path" > /dev/null << EOF
+[Unit]
+Description=Summon LLM Proxy
+After=network.target
+
+[Service]
+Type=simple
+User=$current_user
+Group=$current_group
+ExecStart=$HOME/.local/bin/summon --config $config_file
+Restart=always
+RestartSec=5
+Environment="PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable summon.service
+    sudo systemctl start summon.service
+
+    echo "$MSG_LINUX_DONE: $service_path"
+    echo "$MSG_LINUX_COMMANDS"
+    echo "      sudo systemctl stop summon"
+    echo "      sudo systemctl start summon"
+    echo "      sudo systemctl status summon"
+    echo "      journalctl -u summon -f"
 }
 
 # settings.json 업데이트 (python3 → jq → 직접 생성)
