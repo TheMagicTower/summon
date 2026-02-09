@@ -23,12 +23,12 @@ Claude Code CLI
 
 **Linux/macOS/WSL:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TheMagicTower/summon/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/TheMagicTower/summon/master/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://raw.githubusercontent.com/TheMagicTower/summon/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/TheMagicTower/summon/master/install.ps1 | iex
 ```
 
 > 💡 **WSL 사용자**: WSL 낸과 Windows측 모두에서 Claude Code를 사용할 수 있습니다. 자세한 내용은 아래 [WSL 사용법](#wsl-사용법) 섹션을 참조하세요.

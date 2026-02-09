@@ -593,7 +593,7 @@ fn install_service(config_path: &str) {
         Platform::Linux => install_linux_systemd(config_path),
         Platform::Windows => {
             eprintln!("Windows 서비스 등록은 PowerShell 스크립트를 사용하세요:");
-            eprintln!("  irm https://raw.githubusercontent.com/TheMagicTower/summon/main/install.ps1 | iex");
+            eprintln!("  irm https://raw.githubusercontent.com/TheMagicTower/summon/master/install.ps1 | iex");
         }
         Platform::Unknown => {
             eprintln!("지원되지 않는 플랫폼입니다.");
