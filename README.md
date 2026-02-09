@@ -21,7 +21,7 @@ Claude Code CLI
 
 ### 원라인 설치 (권장)
 
-**Linux/macOS:**
+**Linux/macOS/WSL:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/TheMagicTower/summon/main/install.sh | bash
 ```
@@ -30,6 +30,8 @@ curl -fsSL https://raw.githubusercontent.com/TheMagicTower/summon/main/install.s
 ```powershell
 irm https://raw.githubusercontent.com/TheMagicTower/summon/main/install.ps1 | iex
 ```
+
+> 💡 **WSL 사용자**: WSL 낸과 Windows측 모두에서 Claude Code를 사용할 수 있습니다. 자세한 내용은 아래 [WSL 사용법](#wsl-사용법) 섹션을 참조하세요.
 
 ### 바이너리 다운로드
 
@@ -100,6 +102,33 @@ summon --config config.yaml
 # Claude Code 연동
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 ```
+
+## WSL 사용법
+
+WSL(Windows Subsystem for Linux)에서도 summon을 사용할 수 있습니다.
+
+### WSL 낸에서 Claude Code 사용
+
+```bash
+# WSL 터미널에서
+summon --config ~/.config/summon/config.yaml
+
+# 다른 WSL 터미널에서
+ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+### Windows측에서 Claude Code 사용 (WSL에서 summon 실행)
+
+```bash
+# WSL에서 summon 실행 (0.0.0.0으로 바인딩하여 Windows에서 접근 가능하도록)
+summon --config ~/.config/summon/config.yaml
+
+# Windows 터미널(PowerShell/CMD)에서
+# WSL IP 확인: ip addr show eth0 | grep 'inet '
+ANTHROPIC_BASE_URL=http://$(wsl hostname -I | awk '{print $1}'):18081 claude
+```
+
+또는 `config.yaml`에서 `server.host`를 `"0.0.0.0"`으로 설정하여 Windows에서 접근할 수 있습니다.
 
 ## 주요 기능
 

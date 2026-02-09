@@ -4,6 +4,14 @@ set -e
 REPO="TheMagicTower/summon"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
+# Detect WSL
+is_wsl() {
+    if [ -f /proc/sys/fs/binfmt_misc/WSLInterop ] || [ -n "${WSL_DISTRO_NAME:-}" ]; then
+        return 0
+    fi
+    return 1
+}
+
 # Detect platform
 detect_platform() {
     local os arch
@@ -27,6 +35,11 @@ detect_platform() {
             ;;
         *) echo "Unsupported OS: $os" >&2; exit 1 ;;
     esac
+}
+
+# Get WSL host IP for Windows access
+get_wsl_host_ip() {
+    ip route show default | grep -oP '(?<=via )\d+\.\d+\.\d+\.\d+' || echo "127.0.0.1"
 }
 
 # Get latest release version
@@ -105,8 +118,22 @@ EOF
     echo "🚀 사용법:"
     echo "   summon --config $CONFIG_FILE"
     echo ""
-    echo "   Claude Code 연동:"
-    echo "   ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude"
+
+    # WSL-specific instructions
+    if is_wsl; then
+        WSL_IP=$(get_wsl_host_ip)
+        echo "💡 WSL 환경이 감지되었습니다!"
+        echo ""
+        echo "   WSL 낸에서 Claude Code 사용 시:"
+        echo "   ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude"
+        echo ""
+        echo "   Windows측에서 Claude Code 사용 시:"
+        echo "   1. summon 실행: summon --config $CONFIG_FILE"
+        echo "   2. Windows 터미널에서: ANTHROPIC_BASE_URL=http://$WSL_IP:18081 claude"
+    else
+        echo "   Claude Code 연동:"
+        echo "   ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude"
+    fi
 }
 
 main "$@"
