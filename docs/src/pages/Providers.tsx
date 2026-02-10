@@ -15,6 +15,15 @@ export function Providers() {
       <section className="space-y-4" id="kimi">
         <h2 className="text-2xl font-semibold">Kimi</h2>
         <p className="text-sm text-muted-foreground">{t("providers.kimi.description")}</p>
+        <h3 className="text-sm font-medium">{t("providers.approach1Label")}</h3>
+        <CodeBlock language="yaml">{`routes:
+  - match: "claude-sonnet"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer \${KIMI_API_KEY}"`}</CodeBlock>
+        <h3 className="text-sm font-medium">{t("providers.approach2Label")}</h3>
         <CodeBlock language="yaml">{`routes:
   - match: "kimi"
     upstream:
@@ -22,12 +31,22 @@ export function Providers() {
       auth:
         header: "Authorization"
         value: "Bearer \${KIMI_API_KEY}"`}</CodeBlock>
+        <p className="text-xs text-muted-foreground">{t("providers.approach2Note")}</p>
       </section>
 
       {/* Z.AI */}
       <section className="space-y-4" id="zai">
         <h2 className="text-2xl font-semibold">Z.AI (GLM)</h2>
         <p className="text-sm text-muted-foreground">{t("providers.zai.description")}</p>
+        <h3 className="text-sm font-medium">{t("providers.approach1Label")}</h3>
+        <CodeBlock language="yaml">{`routes:
+  - match: "claude-haiku"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "\${Z_AI_API_KEY}"`}</CodeBlock>
+        <h3 className="text-sm font-medium">{t("providers.approach2Label")}</h3>
         <CodeBlock language="yaml">{`routes:
   - match: "glm"
     upstream:
@@ -35,6 +54,7 @@ export function Providers() {
       auth:
         header: "x-api-key"
         value: "\${Z_AI_API_KEY}"`}</CodeBlock>
+        <p className="text-xs text-muted-foreground">{t("providers.approach2Note")}</p>
       </section>
 
       {/* Custom Provider */}

@@ -16,6 +16,7 @@
     "quickStart": "Quick Start",
     "install": "Install",
     "run": "Run",
+    "settingsHint": "Tip: Add ANTHROPIC_BASE_URL to ~/.claude/settings.json to skip specifying it on every launch. See Configuration for details.",
     "features": "Features",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "Configuration",
     "description": "Configure Summon with a YAML config file.",
+    "multiUser": {
+      "title": "Multi-user Environment",
+      "perUser": "For each user to have their own configuration:",
+      "system": "For system administrators to provide default configuration:"
+    },
     "location": {
       "title": "Config File Location",
       "description": "Summon searches for config files in the following order:",
@@ -158,6 +164,9 @@
         "description": "v0.1 only supports Anthropic API-compatible providers. Non-compatible providers will be supported in v0.2 via request/response transformers."
       }
     },
+    "approach1Label": "Approach 1: Compatible Provider (model name passthrough)",
+    "approach2Label": "Approach 2: Custom Model Binding (settings.json override)",
+    "approach2Note": "Requires ANTHROPIC_DEFAULT_*_MODEL override in ~/.claude/settings.json. See Configuration page for details.",
     "routing": {
       "title": "Routing Logic",
       "description": "How model-based routing works:",

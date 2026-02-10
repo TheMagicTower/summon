@@ -16,6 +16,7 @@
     "quickStart": "Bắt đầu nhanh",
     "install": "Cài đặt",
     "run": "Chạy",
+    "settingsHint": "Mẹo: Thêm ANTHROPIC_BASE_URL vào ~/.claude/settings.json để không cần chỉ định mỗi lần khởi động. Xem trang Cấu hình để biết chi tiết.",
     "features": "Tính năng chính",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "Cấu hình",
     "description": "Cấu hình Summon bằng tệp YAML.",
+    "multiUser": {
+      "title": "Môi trường nhiều người dùng",
+      "perUser": "Để mỗi người dùng có cấu hình riêng:",
+      "system": "Để quản trị viên cung cấp cấu hình mặc định:"
+    },
     "location": {
       "title": "Vị trí tệp cấu hình",
       "description": "Summon tìm kiếm tệp cấu hình theo thứ tự ưu tiên sau:",
@@ -158,6 +164,9 @@
         "description": "v0.1 chỉ hỗ trợ nhà cung cấp tương thích Anthropic API. Nhà cung cấp không tương thích sẽ được hỗ trợ trong v0.2 thông qua transformer yêu cầu/phản hồi."
       }
     },
+    "approach1Label": "Cách 1: Nhà cung cấp tương thích (chuyển tiếp tên mô hình)",
+    "approach2Label": "Cách 2: Ràng buộc mô hình tùy chỉnh (ghi đè settings.json)",
+    "approach2Note": "Cần ghi đè ANTHROPIC_DEFAULT_*_MODEL trong ~/.claude/settings.json. Xem trang Cấu hình để biết chi tiết.",
     "routing": {
       "title": "Logic định tuyến",
       "description": "Cách định tuyến dựa trên model hoạt động:",

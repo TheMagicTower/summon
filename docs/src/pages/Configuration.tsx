@@ -45,6 +45,17 @@ export function Configuration() {
         </div>
       </section>
 
+      {/* Multi-user Environment */}
+      <section className="space-y-4" id="multi-user">
+        <h2 className="text-2xl font-semibold">{t("configuration.multiUser.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("configuration.multiUser.perUser")}</p>
+        <CodeBlock language="bash">{`mkdir -p ~/.config/summon
+cp /path/to/config.yaml ~/.config/summon/`}</CodeBlock>
+        <p className="text-sm text-muted-foreground">{t("configuration.multiUser.system")}</p>
+        <CodeBlock language="bash">{`sudo mkdir -p /etc/summon
+sudo cp config.yaml /etc/summon/`}</CodeBlock>
+      </section>
+
       {/* Approach 1: Compatible Providers */}
       <section className="space-y-4" id="approach1">
         <h2 className="text-2xl font-semibold">{t("configuration.approach1.title")}</h2>

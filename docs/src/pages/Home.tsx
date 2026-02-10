@@ -62,6 +62,9 @@ summon
 
 # Connect Claude Code
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude`}</CodeBlock>
+        <p className="text-sm text-muted-foreground">
+          {t("home.settingsHint")}
+        </p>
       </section>
 
       {/* Features */}

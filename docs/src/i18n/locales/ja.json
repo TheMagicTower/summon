@@ -16,6 +16,7 @@
     "quickStart": "クイックスタート",
     "install": "インストール",
     "run": "実行",
+    "settingsHint": "ヒント: ~/.claude/settings.jsonにANTHROPIC_BASE_URLを追加すると、起動時に毎回指定する必要がなくなります。詳細は設定ページをご覧ください。",
     "features": "主な機能",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "設定",
     "description": "YAML設定ファイルでSummonを設定します。",
+    "multiUser": {
+      "title": "マルチユーザー環境",
+      "perUser": "各ユーザーが独自の設定を使用するには:",
+      "system": "システム管理者がデフォルト設定を提供するには:"
+    },
     "location": {
       "title": "設定ファイルの場所",
       "description": "Summonは以下の優先順位で設定ファイルを検索します：",
@@ -158,6 +164,9 @@
         "description": "v0.1はAnthropic API互換プロバイダーのみサポートします。非互換プロバイダーはv0.2でリクエスト/レスポンストランスフォーマーを通じてサポート予定です。"
       }
     },
+    "approach1Label": "方式1: 互換プロバイダー（モデル名パススルー）",
+    "approach2Label": "方式2: カスタムモデルバインディング（settings.jsonオーバーライド）",
+    "approach2Note": "~/.claude/settings.jsonでANTHROPIC_DEFAULT_*_MODELのオーバーライドが必要です。詳細は設定ページをご覧ください。",
     "routing": {
       "title": "ルーティングロジック",
       "description": "モデルベースルーティングの動作方式：",

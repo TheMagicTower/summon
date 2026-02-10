@@ -50,8 +50,8 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude`}</CodeBlock>
         <CodeBlock language="json" title="~/.claude/settings.json">{`{
   "env": {
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "kimi-for-coding",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-4.7"
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
   }
 }`}</CodeBlock>
       </section>

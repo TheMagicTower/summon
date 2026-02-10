@@ -16,6 +16,7 @@
     "quickStart": "快速开始",
     "install": "安装",
     "run": "运行",
+    "settingsHint": "提示：将ANTHROPIC_BASE_URL添加到~/.claude/settings.json中，可以免去每次启动时指定的麻烦。详情请参阅配置页面。",
     "features": "主要功能",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "配置",
     "description": "使用 YAML 配置文件配置 Summon。",
+    "multiUser": {
+      "title": "多用户环境",
+      "perUser": "各用户使用独立配置：",
+      "system": "系统管理员提供默认配置："
+    },
     "location": {
       "title": "配置文件位置",
       "description": "Summon 按以下优先顺序搜索配置文件：",
@@ -158,6 +164,9 @@
         "description": "v0.1 仅支持 Anthropic API 兼容的提供商。不兼容的提供商将在 v0.2 中通过请求/响应转换器支持。"
       }
     },
+    "approach1Label": "方式1：兼容提供商（模型名原样传递）",
+    "approach2Label": "方式2：自定义模型绑定（settings.json覆盖）",
+    "approach2Note": "需要在~/.claude/settings.json中覆盖ANTHROPIC_DEFAULT_*_MODEL。详情请参阅配置页面。",
     "routing": {
       "title": "路由逻辑",
       "description": "基于模型的路由工作方式：",

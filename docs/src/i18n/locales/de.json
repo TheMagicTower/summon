@@ -16,6 +16,7 @@
     "quickStart": "Schnellstart",
     "install": "Installation",
     "run": "Ausführung",
+    "settingsHint": "Tipp: Fügen Sie ANTHROPIC_BASE_URL zu ~/.claude/settings.json hinzu, um die Angabe bei jedem Start zu vermeiden. Details auf der Konfigurationsseite.",
     "features": "Funktionen",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "Konfiguration",
     "description": "Konfigurieren Sie Summon mit einer YAML-Konfigurationsdatei.",
+    "multiUser": {
+      "title": "Mehrbenutzer-Umgebung",
+      "perUser": "Damit jeder Benutzer eine eigene Konfiguration hat:",
+      "system": "Damit Systemadministratoren eine Standardkonfiguration bereitstellen:"
+    },
     "location": {
       "title": "Speicherort der Konfigurationsdatei",
       "description": "Summon sucht Konfigurationsdateien in folgender Reihenfolge:",
@@ -158,6 +164,9 @@
         "description": "v0.1 unterstützt nur Anthropic API-kompatible Anbieter. Nicht-kompatible Anbieter werden in v0.2 über Anfrage-/Antwort-Transformer unterstützt."
       }
     },
+    "approach1Label": "Ansatz 1: Kompatibler Anbieter (Modellname unverändert)",
+    "approach2Label": "Ansatz 2: Benutzerdefinierte Modellbindung (settings.json-Override)",
+    "approach2Note": "Erfordert ANTHROPIC_DEFAULT_*_MODEL-Override in ~/.claude/settings.json. Details auf der Konfigurationsseite.",
     "routing": {
       "title": "Routing-Logik",
       "description": "Wie modellbasiertes Routing funktioniert:",

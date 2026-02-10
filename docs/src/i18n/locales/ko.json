@@ -16,6 +16,7 @@
     "quickStart": "빠른 시작",
     "install": "설치",
     "run": "실행",
+    "settingsHint": "팁: ~/.claude/settings.json에 ANTHROPIC_BASE_URL을 추가하면 매번 지정할 필요가 없습니다. 자세한 내용은 설정 페이지를 참조하세요.",
     "features": "주요 기능",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "설정",
     "description": "YAML 설정 파일로 Summon을 설정합니다.",
+    "multiUser": {
+      "title": "다중 사용자 환경",
+      "perUser": "각 사용자가 자신만의 설정을 사용하려면:",
+      "system": "시스템 관리자가 기본 설정을 제공하려면:"
+    },
     "location": {
       "title": "설정 파일 위치",
       "description": "Summon은 다음 우선순위로 설정 파일을 검색합니다:",
@@ -158,6 +164,9 @@
         "description": "v0.1은 Anthropic API 호환 프로바이더만 지원합니다. 비호환 프로바이더는 v0.2에서 요청/응답 트랜스포머를 통해 지원 예정입니다."
       }
     },
+    "approach1Label": "방안 1: 호환 제공자 (모델명 그대로 전달)",
+    "approach2Label": "방안 2: 특정 모델 지정 (settings.json 오버라이드)",
+    "approach2Note": "~/.claude/settings.json에서 ANTHROPIC_DEFAULT_*_MODEL 오버라이드가 필요합니다. 자세한 내용은 설정 페이지를 참조하세요.",
     "routing": {
       "title": "라우팅 로직",
       "description": "모델 기반 라우팅 동작 방식:",

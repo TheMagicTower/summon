@@ -16,6 +16,7 @@
     "quickStart": "Inicio rápido",
     "install": "Instalación",
     "run": "Ejecución",
+    "settingsHint": "Consejo: Agregue ANTHROPIC_BASE_URL a ~/.claude/settings.json para no tener que especificarlo en cada inicio. Consulte la página de Configuración para más detalles.",
     "features": "Características",
     "feature": {
       "routing": {
@@ -58,6 +59,11 @@
   "configuration": {
     "title": "Configuración",
     "description": "Configure Summon con un archivo de configuración YAML.",
+    "multiUser": {
+      "title": "Entorno multiusuario",
+      "perUser": "Para que cada usuario tenga su propia configuración:",
+      "system": "Para que los administradores proporcionen una configuración predeterminada:"
+    },
     "location": {
       "title": "Ubicación del archivo de configuración",
       "description": "Summon busca archivos de configuración en el siguiente orden:",
@@ -158,6 +164,9 @@
         "description": "v0.1 solo soporta proveedores compatibles con la API de Anthropic. Los proveedores no compatibles serán soportados en v0.2 mediante transformadores de solicitud/respuesta."
       }
     },
+    "approach1Label": "Enfoque 1: Proveedor compatible (nombre de modelo sin cambios)",
+    "approach2Label": "Enfoque 2: Vinculación de modelo personalizado (override de settings.json)",
+    "approach2Note": "Requiere override de ANTHROPIC_DEFAULT_*_MODEL en ~/.claude/settings.json. Consulte la página de Configuración para más detalles.",
     "routing": {
       "title": "Lógica de enrutamiento",
       "description": "Cómo funciona el enrutamiento basado en modelo:",
