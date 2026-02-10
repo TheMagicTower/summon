@@ -48,6 +48,14 @@ fn is_default_auth_type(s: &String) -> bool {
     s == "api_key"
 }
 
+fn default_true() -> bool {
+    true
+}
+
+fn is_true(v: &bool) -> bool {
+    *v
+}
+
 impl AuthConfig {
     /// 하위 호환: header/value를 직접 반환 (api_key 방식)
     pub fn header_name(&self) -> &str {
@@ -79,6 +87,9 @@ pub struct RouteConfig {
     /// 업스트림 모델명 (원본 모델명을 이 값으로 교체)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model_map: Option<String>,
+    /// 외부 제공자 실패 시 Anthropic API로 폴백 (기본값: true)
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub fallback: bool,
 }
 
 /// 최상위 설정
@@ -371,6 +382,7 @@ routes:
                     },
                     transformer: None,
                     model_map: None,
+                    fallback: true,
                 },
                 RouteConfig {
                     match_pattern: "kimi".into(),
@@ -388,6 +400,7 @@ routes:
                     },
                     transformer: None,
                     model_map: None,
+                    fallback: true,
                 },
             ],
         };
@@ -421,6 +434,7 @@ routes:
                 },
                 transformer: None,
                 model_map: None,
+                fallback: true,
             }],
         }
     }

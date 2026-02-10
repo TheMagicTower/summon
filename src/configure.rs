@@ -414,6 +414,7 @@ fn add_route(config_path: &str) {
         },
         transformer: None,
         model_map: None,
+        fallback: true,
     };
 
     config.routes.push(route);
