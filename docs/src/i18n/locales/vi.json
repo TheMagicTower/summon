@@ -73,6 +73,29 @@
     "structure": {
       "title": "Cấu trúc tệp cấu hình"
     },
+    "approach1": {
+      "title": "Phương pháp 1: Nhà cung cấp tương thích",
+      "description": "Dành cho các nhà cung cấp hiểu tên model Anthropic (ví dụ: Z.AI, Kimi). Tên model gốc từ Claude Code được chuyển tiếp nguyên vẹn đến nhà cung cấp.",
+      "point1": "Nhà cung cấp quyết định model thực tế nào sẽ sử dụng cho tên model Anthropic.",
+      "point2": "Thiết lập đơn giản — không cần cấu hình Claude Code bổ sung."
+    },
+    "approach2": {
+      "title": "Phương pháp 2: Ràng buộc model tùy chỉnh",
+      "description": "Khi bạn muốn sử dụng một model upstream cụ thể (ví dụ: glm-4.7 thay vì model mà nhà cung cấp ánh xạ từ claude-haiku). Ghi đè tên model trong settings.json của Claude Code.",
+      "step1": "Bước 1: Cấu hình Claude Code",
+      "step1Desc": "Ghi đè tên model mặc định trong settings.json của Claude Code để gửi tên model mong muốn:",
+      "step2": "Bước 2: Cấu hình Summon",
+      "step2Desc": "Khớp với tên model đã ghi đè trong config.yaml:",
+      "envVar": "Biến môi trường",
+      "envDesc": "Mô tả",
+      "envBaseUrl": "Địa chỉ proxy (không cần chỉ định mỗi lần khởi động)",
+      "envHaiku": "Tên model được gửi khi chọn cấp Haiku",
+      "envSonnet": "Tên model được gửi khi chọn cấp Sonnet",
+      "envOpus": "Tên model được gửi khi chọn cấp Opus",
+      "point1": "Bạn kiểm soát chính xác model upstream nào mà nhà cung cấp sử dụng.",
+      "point2": "ANTHROPIC_BASE_URL trong settings.json có nghĩa là bạn chỉ cần chạy claude mà không cần biến môi trường bổ sung.",
+      "point3": "Script cài đặt có thể cấu hình điều này tự động."
+    },
     "fields": {
       "title": "Tham chiếu trường",
       "server": "Địa chỉ bind và cổng. Sử dụng 127.0.0.1 để bảo mật (không phơi bày ra ngoài).",

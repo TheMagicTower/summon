@@ -73,6 +73,29 @@
     "structure": {
       "title": "설정 파일 구조"
     },
+    "approach1": {
+      "title": "방안 1: 호환 제공자",
+      "description": "Anthropic 모델명을 그대로 이해하는 제공자(Z.AI, Kimi 등)에 적합합니다. Claude Code가 보내는 원래 모델명이 그대로 제공자에게 전달됩니다.",
+      "point1": "제공자가 Anthropic 모델명에 대해 실제 어떤 모델을 사용할지 결정합니다.",
+      "point2": "간단한 설정 — 별도의 Claude Code 설정이 필요하지 않습니다."
+    },
+    "approach2": {
+      "title": "방안 2: 특정 모델 지정",
+      "description": "제공자가 매핑하는 기본 모델이 아닌 특정 모델을 사용하고 싶을 때 (예: claude-haiku 대신 glm-4.7 지정). Claude Code의 settings.json에서 모델명을 오버라이드합니다.",
+      "step1": "Step 1: Claude Code 설정",
+      "step1Desc": "Claude Code의 settings.json에서 기본 모델명을 오버라이드하여 원하는 모델명을 전송하도록 설정합니다:",
+      "step2": "Step 2: Summon 설정",
+      "step2Desc": "오버라이드된 모델명에 맞춰 config.yaml을 작성합니다:",
+      "envVar": "환경변수",
+      "envDesc": "설명",
+      "envBaseUrl": "프록시 주소 (매번 기동 시 환경변수 지정 불필요)",
+      "envHaiku": "Haiku 티어 선택 시 전송되는 모델명",
+      "envSonnet": "Sonnet 티어 선택 시 전송되는 모델명",
+      "envOpus": "Opus 티어 선택 시 전송되는 모델명",
+      "point1": "제공자가 사용하는 업스트림 모델을 정확히 제어할 수 있습니다.",
+      "point2": "ANTHROPIC_BASE_URL을 settings.json에 넣으면 환경변수 없이 claude만 실행 가능합니다.",
+      "point3": "설치 스크립트가 이 설정을 자동으로 구성할 수 있습니다."
+    },
     "fields": {
       "title": "필드 참조",
       "server": "바인딩 주소와 포트. 보안을 위해 127.0.0.1만 사용 (외부 노출 금지).",

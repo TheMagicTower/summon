@@ -87,9 +87,13 @@ sudo mkdir -p /etc/summon
 sudo cp config.yaml /etc/summon/
 ```
 
-### 配置文件示例
+### 配置方式
 
-创建`config.yaml`文件：
+根据提供商和用例，有两种配置方式。
+
+#### 方式1：兼容提供商（模型名原样传递）
+
+适用于原生理解Anthropic模型名的提供商（如Z.AI、Kimi）。Claude Code发送的原始模型名将原样转发。
 
 ```yaml
 server:
@@ -109,11 +113,71 @@ routes:
 
   - match: "claude-sonnet"
     upstream:
-      url: "https://api.kimi.ai/v1"
+      url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
         value: "Bearer ${KIMI_API_KEY}"
 ```
+
+- Claude Code发送`model: "claude-haiku-4-5-20251001"` → 匹配`"claude-haiku"` → 路由到Z.AI
+- 提供商决定使用哪个实际模型来处理Anthropic模型名
+- 简单设置，无需额外的Claude Code配置
+
+#### 方式2：自定义模型绑定（指定特定模型）
+
+当您想使用特定的上游模型时（例如用`glm-4.7`代替提供商映射的`claude-haiku`）。在Claude Code的`settings.json`中覆盖模型名：
+
+**步骤1.** 配置Claude Code发送自定义模型名：
+
+```json
+// ~/.claude/settings.json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
+  }
+}
+```
+
+| 环境变量 | 说明 |
+|---------|------|
+| `ANTHROPIC_BASE_URL` | 代理地址（无需每次启动时指定） |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | 选择Haiku级别时发送的模型名 |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | 选择Sonnet级别时发送的模型名 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | 选择Opus级别时发送的模型名 |
+
+**步骤2.** 在`config.yaml`中匹配覆盖后的模型名：
+
+```yaml
+server:
+  host: "127.0.0.1"
+  port: 18081
+
+default:
+  url: "https://api.anthropic.com"
+
+routes:
+  - match: "glm"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${Z_AI_API_KEY}"
+
+  - match: "kimi"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${KIMI_API_KEY}"
+```
+
+- Claude Code发送`model: "glm-4.7"`（已覆盖） → 匹配`"glm"` → 路由到Z.AI并使用精确模型
+- 您可以精确控制提供商使用哪个模型
+- 在`settings.json`中设置`ANTHROPIC_BASE_URL`后，可以直接运行`claude`而无需额外环境变量
+
+### 配置参考
 
 - `match`: 如果模型名包含此字符串则匹配（从上到下顺序，应用第一个匹配）
 - `${ENV_VAR}`: 环境变量引用（API密钥不直接写入配置文件）
@@ -131,9 +195,29 @@ summon
 
 # 或直接指定配置文件
 summon --config /path/to/config.yaml
+```
 
-# 与Claude Code集成
+### 连接Claude Code
+
+**选项A：手动（每次会话）**
+```bash
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+**选项B：自动（推荐）**
+
+添加到`~/.claude/settings.json`，这样无需每次都指定URL：
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081"
+  }
+}
+```
+
+然后直接运行：
+```bash
+claude
 ```
 
 ## WSL使用方法

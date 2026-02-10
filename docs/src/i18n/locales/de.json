@@ -73,6 +73,29 @@
     "structure": {
       "title": "Struktur der Konfigurationsdatei"
     },
+    "approach1": {
+      "title": "Ansatz 1: Kompatible Anbieter",
+      "description": "Für Anbieter, die Anthropic-Modellnamen nativ verstehen (z.B. Z.AI, Kimi). Der ursprüngliche Modellname von Claude Code wird unverändert an den Anbieter weitergeleitet.",
+      "point1": "Der Anbieter entscheidet, welches tatsächliche Modell für den angegebenen Anthropic-Modellnamen verwendet wird.",
+      "point2": "Einfache Einrichtung — keine zusätzliche Claude Code-Konfiguration erforderlich."
+    },
+    "approach2": {
+      "title": "Ansatz 2: Benutzerdefinierte Modellbindung",
+      "description": "Wenn Sie ein bestimmtes Upstream-Modell verwenden möchten (z.B. glm-4.7 statt dem, was der Anbieter claude-haiku zuordnet). Überschreiben Sie die Modellnamen in Claude Code's settings.json.",
+      "step1": "Schritt 1: Claude Code konfigurieren",
+      "step1Desc": "Überschreiben Sie die Standard-Modellnamen in Claude Code's settings.json, damit es Ihre bevorzugten Modellnamen sendet:",
+      "step2": "Schritt 2: Summon konfigurieren",
+      "step2Desc": "Passen Sie die überschriebenen Modellnamen in config.yaml an:",
+      "envVar": "Umgebungsvariable",
+      "envDesc": "Beschreibung",
+      "envBaseUrl": "Proxy-Adresse (keine Umgebungsvariable pro Start erforderlich)",
+      "envHaiku": "Modellname, der gesendet wird, wenn Haiku-Stufe ausgewählt ist",
+      "envSonnet": "Modellname, der gesendet wird, wenn Sonnet-Stufe ausgewählt ist",
+      "envOpus": "Modellname, der gesendet wird, wenn Opus-Stufe ausgewählt ist",
+      "point1": "Sie kontrollieren genau, welches Upstream-Modell der Anbieter verwendet.",
+      "point2": "ANTHROPIC_BASE_URL in settings.json bedeutet, dass Sie einfach claude ohne zusätzliche Umgebungsvariablen ausführen können.",
+      "point3": "Das Installationsskript kann dies automatisch konfigurieren."
+    },
     "fields": {
       "title": "Feldreferenz",
       "server": "Bind-Adresse und Port. Verwenden Sie 127.0.0.1 für Sicherheit (keine externe Exposition).",

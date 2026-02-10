@@ -73,6 +73,29 @@
     "structure": {
       "title": "Estructura del archivo de configuración"
     },
+    "approach1": {
+      "title": "Enfoque 1: Proveedores compatibles",
+      "description": "Para proveedores que entienden nativamente los nombres de modelo de Anthropic (por ejemplo, Z.AI, Kimi). El nombre de modelo original de Claude Code se reenvía tal cual al proveedor.",
+      "point1": "El proveedor decide qué modelo real usar para el nombre de modelo de Anthropic dado.",
+      "point2": "Configuración simple — no se requiere configuración adicional de Claude Code."
+    },
+    "approach2": {
+      "title": "Enfoque 2: Vinculación de modelo personalizado",
+      "description": "Cuando quieres usar un modelo upstream específico (por ejemplo, glm-4.7 en lugar de lo que el proveedor mapea claude-haiku). Sobrescribe los nombres de modelo en settings.json de Claude Code.",
+      "step1": "Paso 1: Configurar Claude Code",
+      "step1Desc": "Sobrescribe los nombres de modelo predeterminados en settings.json de Claude Code para que envíe tus nombres de modelo preferidos:",
+      "step2": "Paso 2: Configurar Summon",
+      "step2Desc": "Coincide con los nombres de modelo sobrescritos en config.yaml:",
+      "envVar": "Variable de entorno",
+      "envDesc": "Descripción",
+      "envBaseUrl": "Dirección del proxy (elimina la variable de entorno por inicio)",
+      "envHaiku": "Nombre de modelo enviado cuando se selecciona el nivel Haiku",
+      "envSonnet": "Nombre de modelo enviado cuando se selecciona el nivel Sonnet",
+      "envOpus": "Nombre de modelo enviado cuando se selecciona el nivel Opus",
+      "point1": "Controlas exactamente qué modelo upstream usa el proveedor.",
+      "point2": "ANTHROPIC_BASE_URL en settings.json significa que puedes ejecutar claude sin variables de entorno adicionales.",
+      "point3": "El script de instalación puede configurar esto automáticamente."
+    },
     "fields": {
       "title": "Referencia de campos",
       "server": "Dirección de enlace y puerto. Use 127.0.0.1 por seguridad (sin exposición externa).",

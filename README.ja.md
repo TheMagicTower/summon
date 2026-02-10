@@ -87,9 +87,13 @@ sudo mkdir -p /etc/summon
 sudo cp config.yaml /etc/summon/
 ```
 
-### 設定ファイル例
+### 設定方式
 
-`config.yaml`ファイルを作成します:
+プロバイダーと用途に応じて2つの方式から選択できます。
+
+#### 方式1: 互換プロバイダー（モデル名パススルー）
+
+Anthropicのモデル名をそのまま理解するプロバイダー（Z.AI、Kimiなど）向け。Claude Codeから送信された元のモデル名がそのまま転送されます。
 
 ```yaml
 server:
@@ -109,14 +113,74 @@ routes:
 
   - match: "claude-sonnet"
     upstream:
-      url: "https://api.kimi.ai/v1"
+      url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
         value: "Bearer ${KIMI_API_KEY}"
 ```
 
-- `match`: モデル名にこの文字列が含まれる場合にマッチ（上→下の順、最初のマッチを適用）
-- `${ENV_VAR}`: 環境変数参照（APIキーを設定ファイルに直接記述しません）
+- Claude Codeが`model: "claude-haiku-4-5-20251001"`を送信 → `"claude-haiku"`にマッチ → Z.AIにルーティング
+- プロバイダーがAnthropicモデル名に対して実際に使用するモデルを決定
+- シンプルな設定で、Claude Codeの追加設定は不要
+
+#### 方式2: カスタムモデルバインディング（特定モデル選択）
+
+プロバイダーがマッピングするモデルではなく、特定のモデルを使用したい場合（例：`claude-haiku`の代わりに`glm-4.7`を使用）。Claude Codeの`settings.json`でモデル名をオーバーライドします:
+
+**ステップ1.** Claude Codeがカスタムモデル名を送信するように設定:
+
+```json
+// ~/.claude/settings.json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
+  }
+}
+```
+
+| 環境変数 | 説明 |
+|---------------------|-------------|
+| `ANTHROPIC_BASE_URL` | プロキシアドレス（起動時に毎回指定する必要がなくなります） |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Haikuティア選択時に送信されるモデル名 |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnetティア選択時に送信されるモデル名 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opusティア選択時に送信されるモデル名 |
+
+**ステップ2.** `config.yaml`でオーバーライドされたモデル名にマッチ:
+
+```yaml
+server:
+  host: "127.0.0.1"
+  port: 18081
+
+default:
+  url: "https://api.anthropic.com"
+
+routes:
+  - match: "glm"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${Z_AI_API_KEY}"
+
+  - match: "kimi"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${KIMI_API_KEY}"
+```
+
+- Claude Codeが`model: "glm-4.7"`（オーバーライド済み）を送信 → `"glm"`にマッチ → 正確なモデルでZ.AIにルーティング
+- プロバイダーが使用するモデルを正確に制御可能
+- `settings.json`に`ANTHROPIC_BASE_URL`を設定すると、追加の環境変数なしで`claude`を実行可能
+
+### 設定リファレンス
+
+- `match`: モデル名にこの文字列が含まれている場合にマッチ（上→下の順序、最初のマッチを適用）
+- `${ENV_VAR}`: 環境変数参照（APIキーは設定ファイルに直接記述しません）
 - マッチしないモデルは`default.url`（Anthropic API）にパススルー
 
 ## 実行
@@ -131,9 +195,29 @@ summon
 
 # または設定ファイルを直接指定
 summon --config /path/to/config.yaml
+```
 
-# Claude Code連携
+### Claude Code連携
+
+**オプションA: 手動（セッションごと）**
+```bash
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+**オプションB: 自動（推奨）**
+
+`~/.claude/settings.json`に追加すると、URLを再度指定する必要がなくなります:
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081"
+  }
+}
+```
+
+その後、単に実行:
+```bash
+claude
 ```
 
 ## WSL使用方法

@@ -73,6 +73,29 @@
     "structure": {
       "title": "配置文件结构"
     },
+    "approach1": {
+      "title": "方式1：兼容提供商",
+      "description": "适用于原生理解Anthropic模型名的提供商（如Z.AI、Kimi）。Claude Code发送的原始模型名将原样转发给提供商。",
+      "point1": "提供商决定使用哪个实际模型来处理给定的Anthropic模型名。",
+      "point2": "简单设置——无需额外的Claude Code配置。"
+    },
+    "approach2": {
+      "title": "方式2：自定义模型绑定",
+      "description": "当您想使用特定的上游模型时（例如用glm-4.7代替提供商映射的claude-haiku）。在Claude Code的settings.json中覆盖模型名。",
+      "step1": "步骤1：配置Claude Code",
+      "step1Desc": "在Claude Code的settings.json中覆盖默认模型名，使其发送您偏好的模型名：",
+      "step2": "步骤2：配置Summon",
+      "step2Desc": "在config.yaml中匹配覆盖后的模型名：",
+      "envVar": "环境变量",
+      "envDesc": "说明",
+      "envBaseUrl": "代理地址（无需每次启动时指定环境变量）",
+      "envHaiku": "选择Haiku级别时发送的模型名",
+      "envSonnet": "选择Sonnet级别时发送的模型名",
+      "envOpus": "选择Opus级别时发送的模型名",
+      "point1": "您可以精确控制提供商使用哪个上游模型。",
+      "point2": "在settings.json中设置ANTHROPIC_BASE_URL后，可以直接运行claude而无需额外环境变量。",
+      "point3": "安装脚本可以自动配置此项。"
+    },
     "fields": {
       "title": "字段参考",
       "server": "绑定地址和端口。出于安全考虑仅使用 127.0.0.1（禁止外部暴露）。",

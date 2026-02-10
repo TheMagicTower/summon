@@ -73,6 +73,29 @@
     "structure": {
       "title": "Config File Structure"
     },
+    "approach1": {
+      "title": "Approach 1: Compatible Providers",
+      "description": "For providers that natively understand Anthropic model names (e.g., Z.AI, Kimi). The original model name from Claude Code is forwarded as-is to the provider.",
+      "point1": "The provider decides which actual model to use for the given Anthropic model name.",
+      "point2": "Simple setup — no additional Claude Code configuration required."
+    },
+    "approach2": {
+      "title": "Approach 2: Custom Model Binding",
+      "description": "When you want to use a specific upstream model (e.g., glm-4.7 instead of whatever the provider maps claude-haiku to). Override model names in Claude Code's settings.json.",
+      "step1": "Step 1: Configure Claude Code",
+      "step1Desc": "Override default model names in Claude Code's settings.json so it sends your preferred model names:",
+      "step2": "Step 2: Configure Summon",
+      "step2Desc": "Match on the overridden model names in config.yaml:",
+      "envVar": "Environment Variable",
+      "envDesc": "Description",
+      "envBaseUrl": "Proxy address (eliminates per-launch env var)",
+      "envHaiku": "Model name sent when Haiku tier is selected",
+      "envSonnet": "Model name sent when Sonnet tier is selected",
+      "envOpus": "Model name sent when Opus tier is selected",
+      "point1": "You control exactly which upstream model the provider uses.",
+      "point2": "ANTHROPIC_BASE_URL in settings.json means you can just run claude without extra env vars.",
+      "point3": "The install script can configure this automatically."
+    },
     "fields": {
       "title": "Field Reference",
       "server": "Bind address and port. Use 127.0.0.1 for security (no external exposure).",

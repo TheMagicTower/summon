@@ -87,9 +87,13 @@ sudo mkdir -p /etc/summon
 sudo cp config.yaml /etc/summon/
 ```
 
-### Ví dụ tệp cấu hình
+### Các phương pháp cấu hình
 
-Tạo tệp `config.yaml`:
+Có hai phương pháp tùy thuộc vào nhà cung cấp và trường hợp sử dụng của bạn.
+
+#### Phương pháp 1: Nhà cung cấp tương thích (Chuyển tiếp tên mô hình)
+
+Dành cho các nhà cung cấp hiểu tên mô hình Anthropic (ví dụ: Z.AI, Kimi). Tên mô hình gốc từ Claude Code được chuyển tiếp nguyên vẹn.
 
 ```yaml
 server:
@@ -109,11 +113,71 @@ routes:
 
   - match: "claude-sonnet"
     upstream:
-      url: "https://api.kimi.ai/v1"
+      url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
         value: "Bearer ${KIMI_API_KEY}"
 ```
+
+- Claude Code gửi `model: "claude-haiku-4-5-20251001"` → khớp `"claude-haiku"` → định tuyến đến Z.AI
+- Nhà cung cấp quyết định mô hình thực tế nào sẽ sử dụng cho tên mô hình Anthropic
+- Thiết lập đơn giản, không cần cấu hình Claude Code bổ sung
+
+#### Phương pháp 2: Ràng buộc mô hình tùy chỉnh (Chọn mô hình cụ thể)
+
+Khi bạn muốn sử dụng một mô hình upstream cụ thể (ví dụ: `glm-4.7` thay vì mô hình mà nhà cung cấp ánh xạ từ `claude-haiku`). Ghi đè tên mô hình trong `settings.json` của Claude Code:
+
+**Bước 1.** Cấu hình Claude Code để gửi tên mô hình tùy chỉnh:
+
+```json
+// ~/.claude/settings.json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
+  }
+}
+```
+
+| Biến môi trường | Mô tả |
+|---------------------|-------------|
+| `ANTHROPIC_BASE_URL` | Địa chỉ proxy (cũng loại bỏ nhu cầu chỉ định mỗi lần khởi động) |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Tên mô hình được gửi khi chọn cấp Haiku |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Tên mô hình được gửi khi chọn cấp Sonnet |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Tên mô hình được gửi khi chọn cấp Opus |
+
+**Bước 2.** Khớp với tên mô hình đã ghi đè trong `config.yaml`:
+
+```yaml
+server:
+  host: "127.0.0.1"
+  port: 18081
+
+default:
+  url: "https://api.anthropic.com"
+
+routes:
+  - match: "glm"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${Z_AI_API_KEY}"
+
+  - match: "kimi"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${KIMI_API_KEY}"
+```
+
+- Claude Code gửi `model: "glm-4.7"` (đã ghi đè) → khớp `"glm"` → định tuyến đến Z.AI với mô hình chính xác
+- Bạn kiểm soát chính xác mô hình nào mà nhà cung cấp sử dụng
+- `ANTHROPIC_BASE_URL` trong `settings.json` có nghĩa là bạn chỉ cần chạy `claude` mà không cần biến môi trường bổ sung
+
+### Tham chiếu cấu hình
 
 - `match`: Khớp nếu chuỗi này có trong tên mô hình (thứ tự từ trên xuống dưới, khớp đầu tiên được áp dụng)
 - `${ENV_VAR}`: Tham chiếu biến môi trường (không viết khóa API trực tiếp vào tệp cấu hình)
@@ -131,9 +195,29 @@ summon
 
 # Hoặc chỉ định tệp cấu hình trực tiếp
 summon --config /path/to/config.yaml
+```
 
-# Tích hợp với Claude Code
+### Kết nối Claude Code
+
+**Tùy chọn A: Thủ công (mỗi phiên)**
+```bash
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+**Tùy chọn B: Tự động (khuyến nghị)**
+
+Thêm vào `~/.claude/settings.json` để bạn không cần phải chỉ định URL nữa:
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081"
+  }
+}
+```
+
+Sau đó chỉ cần chạy:
+```bash
+claude
 ```
 
 ## Cách sử dụng WSL
@@ -280,7 +364,7 @@ winsw start $env:LOCALAPPDATA\summon\bin\summon-service.xml
 
 Script cài đặt tự động phát hiện môi trường và chọn loại dịch vụ phù hợp:
 - **Dịch vụ người dùng**: Môi trường desktop
-- **Dịch vụ hệ thống**: Máy chủ không giao diện (ses SSH, v.v.)
+- **Dịch vụ hệ thống**: Máy chủ không giao diện (phiên SSH, v.v.)
 
 #### Phương pháp 1: Dịch vụ người dùng (Môi trường Desktop)
 
@@ -321,7 +405,7 @@ systemctl --user disable summon   # Vô hiệu hóa tự động khởi động
 
 #### Phương pháp 2: Dịch vụ hệ thống (Máy chủ không giao diện)
 
-Đối với môi trường không có ses người dùng D-Bus như ses SSH, sử dụng dịch vụ cấp hệ thống. **Yêu cầu quyền sudo.**
+Đối với môi trường không có phiên người dùng D-Bus như phiên SSH, sử dụng dịch vụ cấp hệ thống. **Yêu cầu quyền sudo.**
 
 **1. Tạo tệp dịch vụ systemd (yêu cầu sudo):**
 
@@ -385,7 +469,7 @@ journalctl -u summon -f
 - Phản hồi từ mô hình bên ngoài không đáp ứng định dạng bối cảnh được yêu cầu bởi mô hình thinking
 
 **Cách sử dụng được khuyến nghị:**
-- Khi chuyển đổi mô hình trong cùng một ses hội thoại, chỉ chuyển đổi giữa mô hình bên ngoài ↔ mô hình bên ngoài
+- Khi chuyển đổi mô hình trong cùng một phiên hội thoại, chỉ chuyển đổi giữa mô hình bên ngoài ↔ mô hình bên ngoài
 - Nếu bạn cần mô hình thinking Anthropic, **hãy bắt đầu cuộc hội thoại mới**
 
 ## Lộ trình

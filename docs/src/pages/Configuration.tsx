@@ -45,32 +45,106 @@ export function Configuration() {
         </div>
       </section>
 
-      {/* Config Structure */}
-      <section className="space-y-4" id="structure">
-        <h2 className="text-2xl font-semibold">{t("configuration.structure.title")}</h2>
+      {/* Approach 1: Compatible Providers */}
+      <section className="space-y-4" id="approach1">
+        <h2 className="text-2xl font-semibold">{t("configuration.approach1.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("configuration.approach1.description")}</p>
         <CodeBlock language="yaml" title="config.yaml">{`server:
-  host: "127.0.0.1"    # Bind address (127.0.0.1 only for security)
-  port: 18081          # Proxy port
+  host: "127.0.0.1"
+  port: 18081
 
-# Default upstream (non-routed models + all non-message requests)
 default:
   url: "https://api.anthropic.com"
 
-# Model-based routing rules
 routes:
-  - match: "kimi"                          # Substring match on model field
+  - match: "claude-haiku"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "\${Z_AI_API_KEY}"
+
+  - match: "claude-sonnet"
     upstream:
       url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
-        value: "Bearer \${KIMI_API_KEY}"   # Environment variable reference
+        value: "Bearer \${KIMI_API_KEY}"`}</CodeBlock>
+        <ul className="list-disc pl-6 space-y-1 text-sm text-muted-foreground">
+          <li>{t("configuration.approach1.point1")}</li>
+          <li>{t("configuration.approach1.point2")}</li>
+        </ul>
+      </section>
 
+      {/* Approach 2: Custom Model Binding */}
+      <section className="space-y-4" id="approach2">
+        <h2 className="text-2xl font-semibold">{t("configuration.approach2.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("configuration.approach2.description")}</p>
+
+        <h3 className="text-lg font-medium">{t("configuration.approach2.step1")}</h3>
+        <p className="text-sm text-muted-foreground">{t("configuration.approach2.step1Desc")}</p>
+        <CodeBlock language="json" title="~/.claude/settings.json">{`{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
+  }
+}`}</CodeBlock>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="px-4 py-2 text-left font-medium">{t("configuration.approach2.envVar")}</th>
+                <th className="px-4 py-2 text-left font-medium">{t("configuration.approach2.envDesc")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["ANTHROPIC_BASE_URL", "configuration.approach2.envBaseUrl"],
+                ["ANTHROPIC_DEFAULT_HAIKU_MODEL", "configuration.approach2.envHaiku"],
+                ["ANTHROPIC_DEFAULT_SONNET_MODEL", "configuration.approach2.envSonnet"],
+                ["ANTHROPIC_DEFAULT_OPUS_MODEL", "configuration.approach2.envOpus"],
+              ].map(([envVar, descKey]) => (
+                <tr key={envVar} className="border-b">
+                  <td className="px-4 py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{envVar}</code>
+                  </td>
+                  <td className="px-4 py-2 text-muted-foreground">{t(descKey)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="text-lg font-medium mt-4">{t("configuration.approach2.step2")}</h3>
+        <p className="text-sm text-muted-foreground">{t("configuration.approach2.step2Desc")}</p>
+        <CodeBlock language="yaml" title="config.yaml">{`server:
+  host: "127.0.0.1"
+  port: 18081
+
+default:
+  url: "https://api.anthropic.com"
+
+routes:
   - match: "glm"
     upstream:
       url: "https://api.z.ai/api/anthropic"
       auth:
         header: "x-api-key"
-        value: "\${Z_AI_API_KEY}"`}</CodeBlock>
+        value: "\${Z_AI_API_KEY}"
+
+  - match: "kimi"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer \${KIMI_API_KEY}"`}</CodeBlock>
+        <ul className="list-disc pl-6 space-y-1 text-sm text-muted-foreground">
+          <li>{t("configuration.approach2.point1")}</li>
+          <li>{t("configuration.approach2.point2")}</li>
+          <li>{t("configuration.approach2.point3")}</li>
+        </ul>
       </section>
 
       {/* Fields */}

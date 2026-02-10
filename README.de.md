@@ -87,9 +87,13 @@ sudo mkdir -p /etc/summon
 sudo cp config.yaml /etc/summon/
 ```
 
-### Beispiel für Konfigurationsdatei
+### Konfigurationsansätze
 
-Erstellen Sie eine `config.yaml`-Datei:
+Es gibt zwei Ansätze, je nach Anbieter und Anwendungsfall.
+
+#### Ansatz 1: Kompatible Anbieter (Modellname unverändert weiterleiten)
+
+Für Anbieter, die Anthropic-Modellnamen nativ verstehen (z.B. Z.AI, Kimi). Der ursprüngliche Modellname von Claude Code wird unverändert weitergeleitet.
 
 ```yaml
 server:
@@ -109,11 +113,71 @@ routes:
 
   - match: "claude-sonnet"
     upstream:
-      url: "https://api.kimi.ai/v1"
+      url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
         value: "Bearer ${KIMI_API_KEY}"
 ```
+
+- Claude Code sendet `model: "claude-haiku-4-5-20251001"` → stimmt mit `"claude-haiku"` überein → wird zu Z.AI weitergeleitet
+- Der Anbieter entscheidet, welches tatsächliche Modell für den Anthropic-Modellnamen verwendet wird
+- Einfache Einrichtung, keine zusätzliche Claude Code-Konfiguration erforderlich
+
+#### Ansatz 2: Benutzerdefinierte Modellbindung (Spezifische Modellauswahl)
+
+Wenn Sie ein bestimmtes Upstream-Modell verwenden möchten (z.B. `glm-4.7` statt dem, was der Anbieter `claude-haiku` zuordnet). Überschreiben Sie die Modellnamen in Claude Code's `settings.json`:
+
+**Schritt 1.** Konfigurieren Sie Claude Code, um benutzerdefinierte Modellnamen zu senden:
+
+```json
+// ~/.claude/settings.json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
+  }
+}
+```
+
+| Umgebungsvariable | Beschreibung |
+|-------------------|--------------|
+| `ANTHROPIC_BASE_URL` | Proxy-Adresse (auch die Angabe bei jedem Start entbehrlich) |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Modellname, der gesendet wird, wenn Haiku-Stufe ausgewählt ist |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Modellname, der gesendet wird, wenn Sonnet-Stufe ausgewählt ist |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Modellname, der gesendet wird, wenn Opus-Stufe ausgewählt ist |
+
+**Schritt 2.** Passen Sie `config.yaml` an die überschriebenen Modellnamen an:
+
+```yaml
+server:
+  host: "127.0.0.1"
+  port: 18081
+
+default:
+  url: "https://api.anthropic.com"
+
+routes:
+  - match: "glm"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${Z_AI_API_KEY}"
+
+  - match: "kimi"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${KIMI_API_KEY}"
+```
+
+- Claude Code sendet `model: "glm-4.7"` (überschrieben) → stimmt mit `"glm"` überein → wird zu Z.AI mit exaktem Modell weitergeleitet
+- Sie kontrollieren genau, welches Modell der Anbieter verwendet
+- `ANTHROPIC_BASE_URL` in `settings.json` bedeutet, dass Sie einfach `claude` ohne zusätzliche Umgebungsvariablen ausführen können
+
+### Konfigurationsreferenz
 
 - `match`: Stimmt überein, wenn diese Zeichenfolge im Modellnamen enthalten ist (von oben nach unten, erste Übereinstimmung wird angewendet)
 - `${ENV_VAR}`: Umgebungsvariablen-Referenz (API-Schlüssel werden nicht direkt in die Konfigurationsdatei geschrieben)
@@ -131,9 +195,29 @@ summon
 
 # Oder Konfigurationsdatei direkt angeben
 summon --config /path/to/config.yaml
+```
 
-# Integration mit Claude Code
+### Claude Code verbinden
+
+**Option A: Manuell (pro Sitzung)**
+```bash
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+**Option B: Automatisch (empfohlen)**
+
+Fügen Sie `~/.claude/settings.json` hinzu, sodass Sie die URL nicht mehr angeben müssen:
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081"
+  }
+}
+```
+
+Dann einfach ausführen:
+```bash
+claude
 ```
 
 ## WSL-Nutzung

@@ -87,9 +87,13 @@ sudo mkdir -p /etc/summon
 sudo cp config.yaml /etc/summon/
 ```
 
-### 설정 파일 예시
+### 설정 방식
 
-`config.yaml` 파일을 생성합니다:
+제공자와 용도에 따라 두 가지 방식을 선택할 수 있습니다.
+
+#### 방안 1: 호환 제공자 (모델명 그대로 전달)
+
+Anthropic 모델명을 그대로 이해하는 제공자(Z.AI, Kimi 등)에 적합합니다. Claude Code가 보내는 원래 모델명이 그대로 전달됩니다.
 
 ```yaml
 server:
@@ -109,11 +113,71 @@ routes:
 
   - match: "claude-sonnet"
     upstream:
-      url: "https://api.kimi.ai/v1"
+      url: "https://api.kimi.com/coding"
       auth:
         header: "Authorization"
         value: "Bearer ${KIMI_API_KEY}"
 ```
+
+- Claude Code가 `model: "claude-haiku-4-5-20251001"`을 전송 → `"claude-haiku"` 매칭 → Z.AI로 라우팅
+- 제공자가 Anthropic 모델명에 대해 실제 어떤 모델을 사용할지 결정
+- 간단한 설정, 별도의 Claude Code 설정 불필요
+
+#### 방안 2: 특정 모델 지정 (settings.json 오버라이드)
+
+제공자가 매핑하는 기본 모델이 아닌 특정 모델을 사용하고 싶을 때 (예: `claude-haiku` 대신 `glm-4.7` 지정). Claude Code의 `settings.json`에서 모델명을 오버라이드합니다:
+
+**Step 1.** Claude Code가 원하는 모델명을 전송하도록 설정:
+
+```json
+// ~/.claude/settings.json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "kimi-for-coding"
+  }
+}
+```
+
+| 환경변수 | 설명 |
+|---------|------|
+| `ANTHROPIC_BASE_URL` | 프록시 주소 (매번 기동 시 지정할 필요 없음) |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Haiku 티어 선택 시 전송되는 모델명 |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet 티어 선택 시 전송되는 모델명 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus 티어 선택 시 전송되는 모델명 |
+
+**Step 2.** 오버라이드된 모델명에 맞춰 `config.yaml` 작성:
+
+```yaml
+server:
+  host: "127.0.0.1"
+  port: 18081
+
+default:
+  url: "https://api.anthropic.com"
+
+routes:
+  - match: "glm"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${Z_AI_API_KEY}"
+
+  - match: "kimi"
+    upstream:
+      url: "https://api.kimi.com/coding"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${KIMI_API_KEY}"
+```
+
+- Claude Code가 `model: "glm-4.7"` (오버라이드됨)을 전송 → `"glm"` 매칭 → Z.AI에서 정확한 모델로 처리
+- 제공자가 사용하는 모델을 정확히 제어 가능
+- `ANTHROPIC_BASE_URL`을 `settings.json`에 넣으면 환경변수 없이 `claude`만 실행 가능
+
+### 설정 참조
 
 - `match`: 모델명에 이 문자열이 포함되면 매칭 (위→아래 순서, 첫 매칭 적용)
 - `${ENV_VAR}`: 환경변수 참조 (API 키를 설정 파일에 직접 기입하지 않음)
@@ -131,9 +195,29 @@ summon
 
 # 또는 설정 파일 직접 지정
 summon --config /path/to/config.yaml
+```
 
-# Claude Code 연동
+### Claude Code 연결
+
+**방법 A: 수동 (세션마다)**
+```bash
 ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
+```
+
+**방법 B: 자동 (권장)**
+
+`~/.claude/settings.json`에 추가하면 매번 URL을 지정할 필요가 없습니다:
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:18081"
+  }
+}
+```
+
+이후 간단히 실행:
+```bash
+claude
 ```
 
 ## WSL 사용법

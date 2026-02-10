@@ -73,6 +73,29 @@
     "structure": {
       "title": "設定ファイル構造"
     },
+    "approach1": {
+      "title": "方式1: 互換プロバイダー",
+      "description": "Anthropicのモデル名をそのまま理解するプロバイダー（Z.AI、Kimiなど）向け。Claude Codeから送信された元のモデル名がそのままプロバイダーに転送されます。",
+      "point1": "プロバイダーがAnthropicモデル名に対して実際に使用するモデルを決定します。",
+      "point2": "シンプルな設定 — Claude Codeの追加設定は不要です。"
+    },
+    "approach2": {
+      "title": "方式2: カスタムモデルバインディング",
+      "description": "プロバイダーがマッピングするモデルではなく、特定のモデルを使用したい場合（例：プロバイダーがclaude-haikuにマッピングするモデルの代わりにglm-4.7を使用）。Claude Codeのsettings.jsonでモデル名をオーバーライドします。",
+      "step1": "ステップ1: Claude Codeの設定",
+      "step1Desc": "Claude Codeのsettings.jsonでデフォルトモデル名をオーバーライドし、希望のモデル名を送信するように設定します:",
+      "step2": "ステップ2: Summonの設定",
+      "step2Desc": "config.yamlでオーバーライドされたモデル名にマッチさせます:",
+      "envVar": "環境変数",
+      "envDesc": "説明",
+      "envBaseUrl": "プロキシアドレス（起動時に毎回環境変数を指定する必要がなくなります）",
+      "envHaiku": "Haikuティア選択時に送信されるモデル名",
+      "envSonnet": "Sonnetティア選択時に送信されるモデル名",
+      "envOpus": "Opusティア選択時に送信されるモデル名",
+      "point1": "プロバイダーが使用するアップストリームモデルを正確に制御できます。",
+      "point2": "settings.jsonにANTHROPIC_BASE_URLを設定すると、追加の環境変数なしでclaudeを実行できます。",
+      "point3": "インストールスクリプトがこの設定を自動的に構成できます。"
+    },
     "fields": {
       "title": "フィールドリファレンス",
       "server": "バインドアドレスとポート。セキュリティのため127.0.0.1のみ使用（外部公開禁止）。",
