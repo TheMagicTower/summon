@@ -9,6 +9,7 @@ default:
 # 모델별 라우팅 규칙
 routes:
   - match: "glm"
+    # fallback: true  # 기본값 — 외부 제공자 실패 시 Anthropic API로 자동 재시도
     upstream:
       url: "https://api.z.ai/api/anthropic"
       auth:
@@ -16,6 +17,7 @@ routes:
         value: "${ZAI_API_KEY}"
 
   - match: "kimi"
+    fallback: false  # 폴백 비활성화 — 실패 시 에러 그대로 반환
     upstream:
       url: "https://api.kimi.com/coding"
       auth:

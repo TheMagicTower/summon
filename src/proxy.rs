@@ -51,7 +51,7 @@ pub async fn proxy_handler(
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
     if !is_messages {
-        return forward(&state, parts, bytes, None).await;
+        return forward(&state, &parts, bytes, None).await;
     }
 
     let model = extract_model(&bytes)?;
@@ -59,7 +59,29 @@ pub async fn proxy_handler(
 
     tracing::info!(model = %model, routed = route.is_some(), "라우팅 결정");
 
-    forward(&state, parts, bytes, route).await
+    match route {
+        Some(route) if route.fallback => {
+            // 폴백 활성화: 외부 제공자 실패 시 Anthropic API로 재시도
+            match forward(&state, &parts, bytes.clone(), Some(route)).await {
+                Ok(resp) if resp.status().is_success() => Ok(resp),
+                Ok(resp) => {
+                    tracing::warn!(
+                        status = %resp.status(),
+                        "외부 제공자 비성공 응답, Anthropic API로 폴백"
+                    );
+                    forward(&state, &parts, bytes, None).await
+                }
+                Err(_) => {
+                    tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
+                    forward(&state, &parts, bytes, None).await
+                }
+            }
+        }
+        _ => {
+            // 폴백 비활성화 또는 라우팅 미매칭: 기존 동작 유지
+            forward(&state, &parts, bytes, route).await
+        }
+    }
 }
 
 /// 업스트림으로 요청 포워딩
@@ -68,7 +90,7 @@ pub async fn proxy_handler(
 /// - route가 None이면 기본 Anthropic API로 패스스루
 async fn forward(
     state: &AppState,
-    parts: axum::http::request::Parts,
+    parts: &axum::http::request::Parts,
     body_bytes: Bytes,
     route: Option<&RouteConfig>,
 ) -> Result<Response<Body>, StatusCode> {
@@ -97,7 +119,7 @@ async fn forward(
     let uri_string = format!("{}{}", base_url, path_and_query);
 
     let mut builder = hyper::Request::builder()
-        .method(parts.method)
+        .method(parts.method.clone())
         .uri(&uri_string);
 
     // 헤더 복사 (host 제외, 라우팅 시 기존 인증 헤더도 제외)
@@ -137,7 +159,7 @@ async fn forward(
 /// 트랜스포머를 사용하여 요청/응답 변환
 async fn forward_with_transform(
     state: &AppState,
-    parts: axum::http::request::Parts,
+    parts: &axum::http::request::Parts,
     body_bytes: Bytes,
     route: &RouteConfig,
     transformer: Arc<dyn Transformer>,
@@ -165,7 +187,7 @@ async fn forward_with_transform(
     let uri_string = format!("{}{}", route.upstream.url, transformed.path);
 
     let mut builder = hyper::Request::builder()
-        .method(parts.method)
+        .method(parts.method.clone())
         .uri(&uri_string);
 
     // 기본 헤더: Content-Type
