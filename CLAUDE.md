@@ -51,9 +51,12 @@ Claude Code CLI
 
 ```
 src/
-├── main.rs      # 엔트리포인트, --config CLI 인자, AppState, axum 서버 시작
-├── config.rs    # Config 구조체, YAML 로드, ${ENV_VAR} 치환, find_route 모델 매칭
-└── proxy.rs     # 프록시 핸들러, 패스스루/라우팅 포워딩, SSE 스트리밍
+├── main.rs        # 엔트리포인트, CLI 파싱 (Configure/Update), AppState, axum 서버 시작
+├── config.rs      # Config 구조체, YAML 로드, ${ENV_VAR} 치환, find_route 모델 매칭
+├── proxy.rs       # 프록시 핸들러, 패스스루/라우팅 포워딩, SSE 스트리밍
+├── configure.rs   # 대화형 설정 관리 (enable/disable/add/remove/status 등 + 대화형 메뉴)
+├── transformer.rs # 요청/응답 변환 (비호환 제공자 지원)
+└── update.rs      # 자체 업데이트 (GitHub 릴리스 확인 + 바이너리 교체)
 ```
 
 ### 핵심 흐름

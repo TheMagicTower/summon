@@ -136,6 +136,22 @@
       "title": "模型绑定",
       "description": "将 Claude Code 的默认模型替换为外部提供商。安装脚本可以自动配置。"
     },
+    "cli": {
+      "title": "CLI 管理",
+      "description": "从命令行管理 Summon。",
+      "update": {
+        "title": "自更新",
+        "description": "检查新版本并自动替换二进制文件。将当前版本与最新 GitHub 发布进行比较，并提示确认。"
+      },
+      "commands": {
+        "title": "直接命令",
+        "description": "所有管理命令都是顶级的——无需前缀。"
+      },
+      "configure": {
+        "title": "交互式菜单",
+        "description": "运行 summon configure 将打开一个交互式菜单，包含所有可用操作。"
+      }
+    },
     "wsl": {
       "title": "WSL 使用方法",
       "description": "Summon 在 WSL 中可以正常工作。您可以在 WSL 内部和 Windows 两端使用 Claude Code。",

@@ -56,6 +56,31 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude`}</CodeBlock>
 }`}</CodeBlock>
       </section>
 
+      {/* CLI Management */}
+      <section className="space-y-4" id="cli">
+        <h2 className="text-2xl font-semibold">{t("usage.cli.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("usage.cli.description")}</p>
+
+        <h3 className="text-lg font-medium">{t("usage.cli.update.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("usage.cli.update.description")}</p>
+        <CodeBlock language="bash">{`summon update`}</CodeBlock>
+
+        <h3 className="text-lg font-medium mt-6">{t("usage.cli.commands.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("usage.cli.commands.description")}</p>
+        <CodeBlock language="bash">{`summon status          # Show current status
+summon enable          # Enable proxy
+summon disable         # Disable proxy
+summon start           # Start proxy in background
+summon stop            # Stop proxy
+summon add             # Add a provider route
+summon remove          # Remove a provider route
+summon restore         # Restore settings backup`}</CodeBlock>
+
+        <h3 className="text-lg font-medium mt-6">{t("usage.cli.configure.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("usage.cli.configure.description")}</p>
+        <CodeBlock language="bash">{`summon configure`}</CodeBlock>
+      </section>
+
       {/* WSL */}
       <section className="space-y-4" id="wsl">
         <h2 className="text-2xl font-semibold">{t("usage.wsl.title")}</h2>

@@ -2,6 +2,7 @@ mod config;
 mod configure;
 mod proxy;
 mod transformer;
+mod update;
 
 use clap::{Parser, Subcommand};
 use config::Config;
@@ -36,15 +37,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// 설정 관리
-    Configure {
-        #[command(subcommand)]
-        action: ConfigureAction,
-    },
-}
-
-#[derive(Subcommand)]
-enum ConfigureAction {
     /// 프록시 활성화 (settings.json 수정 + 프로세스 시작)
     Enable,
     /// 프록시 비활성화 (프로세스 중지 + settings.json 복원)
@@ -61,6 +53,10 @@ enum ConfigureAction {
     Status,
     /// settings.json 백업에서 복구
     Restore,
+    /// 대화형 설정 메뉴
+    Configure,
+    /// 최신 버전으로 업데이트
+    Update,
 }
 
 #[tokio::main]
@@ -87,19 +83,16 @@ async fn main() {
     };
 
     match cli.command {
-        Some(Commands::Configure { action }) => {
-            let action_str = match action {
-                ConfigureAction::Enable => "enable",
-                ConfigureAction::Disable => "disable",
-                ConfigureAction::Start => "start",
-                ConfigureAction::Stop => "stop",
-                ConfigureAction::Add => "add",
-                ConfigureAction::Remove => "remove",
-                ConfigureAction::Status => "status",
-                ConfigureAction::Restore => "restore",
-            };
-            configure::run(action_str, &config_path);
-        }
+        Some(Commands::Enable) => configure::run("enable", &config_path),
+        Some(Commands::Disable) => configure::run("disable", &config_path),
+        Some(Commands::Start) => configure::run("start", &config_path),
+        Some(Commands::Stop) => configure::run("stop", &config_path),
+        Some(Commands::Add) => configure::run("add", &config_path),
+        Some(Commands::Remove) => configure::run("remove", &config_path),
+        Some(Commands::Status) => configure::run("status", &config_path),
+        Some(Commands::Restore) => configure::run("restore", &config_path),
+        Some(Commands::Configure) => configure::interactive_menu(&config_path),
+        Some(Commands::Update) => update::run(),
         None => {
             // 기존 프록시 서버 실행
             run_server(&config_path).await;

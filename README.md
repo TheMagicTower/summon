@@ -220,6 +220,46 @@ Then simply run:
 claude
 ```
 
+## CLI Management
+
+### Self-Update
+
+Check for new releases and update the binary in place:
+
+```bash
+summon update
+```
+
+The update command:
+1. Checks the current version against the latest GitHub release
+2. Prompts for confirmation if a newer version is available
+3. Downloads and replaces the binary automatically
+
+> Windows: Self-update is not supported. Use `install.ps1` instead.
+
+### Direct Commands
+
+All management commands are top-level:
+
+```bash
+summon status          # Show current status
+summon enable          # Enable proxy (modify settings.json + start)
+summon disable         # Disable proxy (stop + restore settings.json)
+summon start           # Start proxy in background
+summon stop            # Stop proxy
+summon add             # Add a provider route
+summon remove          # Remove a provider route
+summon restore         # Restore settings.json from backup
+```
+
+### Interactive Configuration
+
+Running `summon configure` opens an interactive menu with all available actions:
+
+```bash
+summon configure
+```
+
 ## WSL Usage
 
 You can also use summon from WSL (Windows Subsystem for Linux).

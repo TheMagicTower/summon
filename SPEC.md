@@ -84,9 +84,12 @@ summon/
 ├── config.yaml           # 설정 예시
 ├── SPEC.md
 ├── src/
-│   ├── main.rs           # 엔트리포인트, 서버 시작
+│   ├── main.rs           # 엔트리포인트, CLI 파싱, 서버 시작
 │   ├── config.rs         # 설정 파일 로드/파싱, 환경변수 치환, 모델 매칭
-│   └── proxy.rs          # 프록시 핸들러 (패스스루 + 라우팅 + 포워딩)
+│   ├── proxy.rs          # 프록시 핸들러 (패스스루 + 라우팅 + 포워딩)
+│   ├── configure.rs      # 대화형 설정 관리 (enable/disable/add/remove/status 등)
+│   ├── transformer.rs    # 요청/응답 변환 (비호환 제공자 지원)
+│   └── update.rs         # 자체 업데이트 (GitHub 릴리스 확인 + 바이너리 교체)
 ```
 
 ## 설정 파일

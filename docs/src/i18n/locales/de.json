@@ -136,6 +136,22 @@
       "title": "Modell-Bindung",
       "description": "Ersetzen Sie die Standardmodelle von Claude Code durch externe Anbieter. Das Installationsskript kann dies automatisch konfigurieren."
     },
+    "cli": {
+      "title": "CLI-Verwaltung",
+      "description": "Verwalten Sie Summon über die Kommandozeile.",
+      "update": {
+        "title": "Selbstaktualisierung",
+        "description": "Prüft auf neue Releases und ersetzt die Binärdatei automatisch. Vergleicht die aktuelle Version mit dem neuesten GitHub-Release und fragt nach Bestätigung."
+      },
+      "commands": {
+        "title": "Direkte Befehle",
+        "description": "Alle Verwaltungsbefehle sind auf oberster Ebene — kein Präfix erforderlich."
+      },
+      "configure": {
+        "title": "Interaktives Menü",
+        "description": "Durch Ausführen von summon configure wird ein interaktives Menü mit allen verfügbaren Aktionen angezeigt."
+      }
+    },
     "wsl": {
       "title": "WSL-Verwendung",
       "description": "Summon funktioniert in WSL. Sie können Claude Code sowohl aus WSL als auch aus Windows verwenden.",
