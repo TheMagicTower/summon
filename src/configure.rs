@@ -134,6 +134,43 @@ fn resolve_config_path(config_path: &str) -> PathBuf {
     path
 }
 
+// ── 대화형 메뉴 ──
+
+/// 서브커맨드 없이 `summon configure` 실행 시 대화형 메뉴 표시
+pub fn interactive_menu(config_path: &str) {
+    let actions = &[
+        "상태 확인 (status)",
+        "프록시 활성화 (enable)",
+        "프록시 비활성화 (disable)",
+        "프록시 시작 (start)",
+        "프록시 중지 (stop)",
+        "프로바이더 추가 (add)",
+        "프로바이더 제거 (remove)",
+        "설정 복원 (restore)",
+    ];
+
+    let selection = Select::new()
+        .with_prompt("작업 선택")
+        .items(actions)
+        .default(0)
+        .interact()
+        .expect("선택 실패");
+
+    let action = match selection {
+        0 => "status",
+        1 => "enable",
+        2 => "disable",
+        3 => "start",
+        4 => "stop",
+        5 => "add",
+        6 => "remove",
+        7 => "restore",
+        _ => unreachable!(),
+    };
+
+    run(action, config_path);
+}
+
 // ── 디스패치 ──
 
 pub fn run(action: &str, config_path: &str) {

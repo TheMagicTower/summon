@@ -136,6 +136,22 @@
       "title": "Ràng buộc Model",
       "description": "Thay thế model mặc định của Claude Code bằng nhà cung cấp bên ngoài. Script cài đặt có thể cấu hình tự động."
     },
+    "cli": {
+      "title": "Quản lý CLI",
+      "description": "Quản lý Summon từ dòng lệnh.",
+      "update": {
+        "title": "Tự cập nhật",
+        "description": "Kiểm tra phiên bản mới và tự động thay thế binary. So sánh phiên bản hiện tại với bản phát hành GitHub mới nhất và yêu cầu xác nhận."
+      },
+      "commands": {
+        "title": "Lệnh trực tiếp",
+        "description": "Tất cả lệnh quản lý đều ở cấp cao nhất — không cần tiền tố."
+      },
+      "configure": {
+        "title": "Menu tương tác",
+        "description": "Chạy summon configure sẽ mở menu tương tác với tất cả các thao tác có sẵn."
+      }
+    },
     "wsl": {
       "title": "Sử dụng trên WSL",
       "description": "Summon hoạt động trên WSL. Bạn có thể sử dụng Claude Code từ cả bên trong WSL và Windows.",

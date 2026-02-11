@@ -136,6 +136,22 @@
       "title": "モデルバインディング",
       "description": "Claude Codeのデフォルトモデルを外部プロバイダーに変更します。インストールスクリプトで自動設定可能です。"
     },
+    "cli": {
+      "title": "CLI管理",
+      "description": "コマンドラインからSummonを管理します。",
+      "update": {
+        "title": "セルフアップデート",
+        "description": "新しいリリースを確認し、バイナリを自動的に置き換えます。現在のバージョンと最新のGitHubリリースを比較し、確認を求めます。"
+      },
+      "commands": {
+        "title": "直接コマンド",
+        "description": "すべての管理コマンドはトップレベルです — プレフィックスは不要です。"
+      },
+      "configure": {
+        "title": "対話型メニュー",
+        "description": "summon configureを実行すると、すべてのアクションを選択できる対話型メニューが表示されます。"
+      }
+    },
     "wsl": {
       "title": "WSLでの使い方",
       "description": "SummonはWSLで動作します。WSL内部とWindowsの両方からClaude Codeを使用できます。",

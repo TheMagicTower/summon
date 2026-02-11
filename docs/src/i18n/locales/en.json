@@ -136,6 +136,22 @@
       "title": "Model Binding",
       "description": "Override Claude Code's default models to use external providers. The install script can configure this automatically."
     },
+    "cli": {
+      "title": "CLI Management",
+      "description": "Manage Summon from the command line.",
+      "update": {
+        "title": "Self-Update",
+        "description": "Check for new releases and update the binary in place. Compares the current version against the latest GitHub release and prompts for confirmation."
+      },
+      "commands": {
+        "title": "Direct Commands",
+        "description": "All management commands are top-level — no prefix needed."
+      },
+      "configure": {
+        "title": "Interactive Menu",
+        "description": "Running summon configure opens an interactive menu with all available actions."
+      }
+    },
     "wsl": {
       "title": "WSL Usage",
       "description": "Summon works in WSL. You can use Claude Code from both inside WSL and from Windows.",
