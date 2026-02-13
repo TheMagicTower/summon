@@ -181,7 +181,37 @@ routes:
 
 - `match`: Khớp nếu chuỗi này có trong tên mô hình (thứ tự từ trên xuống dưới, khớp đầu tiên được áp dụng)
 - `${ENV_VAR}`: Tham chiếu biến môi trường (không viết khóa API trực tiếp vào tệp cấu hình)
+- `upstream.auth.pool`: Các giá trị khóa API bổ sung để phân phối tải (sử dụng cùng header với `auth.header`)
+- `concurrency`: Giới hạn yêu cầu đồng thời cho mỗi khóa (khi vượt quá, quay lại Anthropic hoặc trả về 429)
+- `fallback`: Có quay lại Anthropic API khi nhà cung cấp gặp sự cố hay không (mặc định: `true`)
 - Các mô hình không khớp được chuyển qua `default.url` (Anthropic API)
+
+### Pool khóa API (Xử lý giới hạn đồng thời)
+
+Một số nhà cung cấp giới hạn số lượng yêu cầu đồng thời cho mỗi khóa API (ví dụ: GLM-5 chỉ cho phép 1 yêu cầu đồng thời cho mỗi khóa). Bạn có thể đăng ký nhiều khóa API làm pool để tăng tổng số đồng thời:
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # giới hạn yêu cầu đồng thời cho mỗi khóa
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # các khóa bổ sung (cùng header)
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**Cách hoạt động:**
+
+- Các yêu cầu được phân phối đến khóa có ít kết nối hoạt động nhất (**Least-Connections**)
+- Việc sử dụng đồng thời của mỗi khóa được theo dõi và giới hạn bởi cài đặt `concurrency`
+- Khi tất cả các khóa đạt đến giới hạn: quay lại Anthropic (nếu `fallback: true`) hoặc trả về HTTP 429
+- Các phản hồi streaming tự động giải phóng khóa khi luồng kết thúc
 
 ## Chạy
 
@@ -218,6 +248,46 @@ Thêm vào `~/.claude/settings.json` để bạn không cần phải chỉ đị
 Sau đó chỉ cần chạy:
 ```bash
 claude
+```
+
+## Quản lý CLI
+
+### Tự động cập nhật
+
+Kiểm tra các bản phát hành mới và cập nhật binary tại chỗ:
+
+```bash
+summon update
+```
+
+Lệnh cập nhật:
+1. So sánh phiên bản hiện tại với bản phát hành GitHub mới nhất
+2. Yêu cầu xác nhận nếu có phiên bản mới hơn
+3. Tự động tải xuống và thay thế binary
+
+> Windows: Tự động cập nhật không được hỗ trợ. Hãy sử dụng `install.ps1` thay thế.
+
+### Lệnh trực tiếp
+
+Tất cả các lệnh quản lý là lệnh cấp cao nhất:
+
+```bash
+summon status          # Hiển thị trạng thái hiện tại
+summon enable          # Kích hoạt proxy (sửa đổi settings.json + khởi động)
+summon disable         # Vô hiệu hóa proxy (dừng + khôi phục settings.json)
+summon start           # Khởi động proxy trong nền
+summon stop            # Dừng proxy
+summon add             # Thêm tuyến nhà cung cấp
+summon remove          # Xóa tuyến nhà cung cấp
+summon restore         # Khôi phục settings.json từ bản sao lưu
+```
+
+### Cấu hình tương tác
+
+Chạy `summon configure` sẽ mở menu tương tác với tất cả các hành động có sẵn:
+
+```bash
+summon configure
 ```
 
 ## Cách sử dụng WSL
@@ -455,6 +525,7 @@ journalctl -u summon -f
 - **Định tuyến dựa trên mô hình**: Quyết định định tuyến dựa trên trường `model` trong `/v1/messages` POST
 - **Streaming SSE**: Passthrough thời gian thực theo từng khối
 - **Xác thực đăng ký đồng thời**: Token OAuth Anthropic được giữ nguyên, chỉ nhà cung cấp bên ngoài sử dụng khóa API
+- **Pool khóa API**: Hỗ trợ nhiều khóa API cho mỗi tuyến với phân phối Least-Connections cho các nhà cung cấp có giới hạn đồng thời cho mỗi khóa
 - **Bảo mật**: Chỉ bind đến `127.0.0.1`, khóa API được tham chiếu từ biến môi trường
 
 ## ⚠️ Hạn chế đã biết

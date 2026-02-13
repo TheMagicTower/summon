@@ -181,7 +181,37 @@ routes:
 
 - `match`: 모델명에 이 문자열이 포함되면 매칭 (위→아래 순서, 첫 매칭 적용)
 - `${ENV_VAR}`: 환경변수 참조 (API 키를 설정 파일에 직접 기입하지 않음)
+- `upstream.auth.pool`: 부하 분산을 위한 추가 API 키 값 (`auth.header`와 동일한 헤더 사용)
+- `concurrency`: 키별 동시 요청 제한 (초과 시 Anthropic으로 폴백 또는 429 반환)
+- `fallback`: 제공자 실패 시 Anthropic API로 폴백 여부 (기본값: `true`)
 - 매칭되지 않는 모델은 `default.url`(Anthropic API)로 패스스루
+
+### API 키 풀 (동시성 제한 처리)
+
+일부 제공자는 API 키당 동시 요청 수를 제한합니다 (예: GLM-5는 키당 1개 동시 요청만 허용). 여러 API 키를 풀로 등록하여 전체 동시성을 높일 수 있습니다:
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # 키별 동시 요청 제한
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # 추가 키 (동일한 헤더)
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**작동 방식:**
+
+- 요청은 가장 적은 활성 연결을 가진 키로 분배됩니다 (**Least-Connections**)
+- 각 키의 동시 사용량은 `concurrency` 설정에 의해 추적 및 제한됩니다
+- 모든 키가 한도에 도달하면: Anthropic으로 폴백 (`fallback: true`인 경우) 또는 HTTP 429 반환
+- 스트리밍 응답은 스트림이 끝날 때 키를 자동으로 해제합니다
 
 ## 실행
 
@@ -218,6 +248,46 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 이후 간단히 실행:
 ```bash
 claude
+```
+
+## CLI 관리
+
+### 자체 업데이트
+
+새 릴리스를 확인하고 바이너리를 제자리에서 업데이트합니다:
+
+```bash
+summon update
+```
+
+업데이트 명령은:
+1. 현재 버전을 최신 GitHub 릴리스와 비교합니다
+2. 새 버전이 있으면 확인을 요청합니다
+3. 바이너리를 자동으로 다운로드하고 교체합니다
+
+> Windows: 자체 업데이트는 지원되지 않습니다. 대신 `install.ps1`을 사용하세요.
+
+### 직접 명령
+
+모든 관리 명령은 최상위 수준에서 사용할 수 있습니다:
+
+```bash
+summon status          # 현재 상태 표시
+summon enable          # 프록시 활성화 (settings.json 수정 + 시작)
+summon disable         # 프록시 비활성화 (중지 + settings.json 복원)
+summon start           # 백그라운드에서 프록시 시작
+summon stop            # 프록시 중지
+summon add             # 제공자 라우트 추가
+summon remove          # 제공자 라우트 제거
+summon restore         # 백업에서 settings.json 복원
+```
+
+### 대화형 구성
+
+`summon configure`를 실행하면 사용 가능한 모든 작업이 포함된 대화형 메뉴가 열립니다:
+
+```bash
+summon configure
 ```
 
 ## WSL 사용법
@@ -455,6 +525,7 @@ journalctl -u summon -f
 - **모델 기반 라우팅**: `/v1/messages` POST의 `model` 필드로 라우팅 결정
 - **SSE 스트리밍**: 청크 단위 실시간 패스스루
 - **구독 인증 병행**: Anthropic OAuth 토큰은 그대로 유지, 외부 제공자만 API 키 교체
+- **API 키 풀**: 키당 동시성 제한이 있는 제공자를 위해 Least-Connections 분배로 라우트당 여러 API 키 지원
 - **보안**: `127.0.0.1`에만 바인딩, API 키는 환경변수 참조
 
 ## ⚠️ 주의사항 (Known Limitations)

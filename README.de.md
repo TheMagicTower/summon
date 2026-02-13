@@ -181,7 +181,37 @@ routes:
 
 - `match`: Stimmt überein, wenn diese Zeichenfolge im Modellnamen enthalten ist (von oben nach unten, erste Übereinstimmung wird angewendet)
 - `${ENV_VAR}`: Umgebungsvariablen-Referenz (API-Schlüssel werden nicht direkt in die Konfigurationsdatei geschrieben)
+- `upstream.auth.pool`: Zusätzliche API-Schlüsselwerte für Lastverteilung (verwendet denselben Header wie `auth.header`)
+- `concurrency`: Gleichzeitige Anfragen-Limit pro Schlüssel (bei Überschreitung Fallback zu Anthropic oder 429 zurückgeben)
+- `fallback`: Ob bei Anbieter-Ausfall auf Anthropic API zurückgegriffen werden soll (Standard: `true`)
 - Modelle ohne Übereinstimmung werden an `default.url` (Anthropic API) weitergeleitet
+
+### API-Schlüssel-Pool (Gleichzeitigkeits-Begrenzung)
+
+Einige Anbieter begrenzen die gleichzeitigen Anfragen pro API-Schlüssel (z.B. erlaubt GLM-5 nur 1 gleichzeitige Anfrage pro Schlüssel). Sie können mehrere API-Schlüssel als Pool registrieren, um die Gesamt-Gleichzeitigkeit zu erhöhen:
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # Gleichzeitige Anfragen-Limit pro Schlüssel
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # Zusätzliche Schlüssel (gleicher Header)
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**Funktionsweise:**
+
+- Anfragen werden an den Schlüssel mit den wenigsten aktiven Verbindungen verteilt (**Least-Connections**)
+- Die gleichzeitige Nutzung jedes Schlüssels wird durch die `concurrency`-Einstellung verfolgt und begrenzt
+- Wenn alle Schlüssel ihr Limit erreichen: Fallback zu Anthropic (wenn `fallback: true`) oder HTTP 429 zurückgeben
+- Streaming-Antworten geben den Schlüssel automatisch frei, wenn der Stream endet
 
 ## Ausführung
 
@@ -218,6 +248,46 @@ Fügen Sie `~/.claude/settings.json` hinzu, sodass Sie die URL nicht mehr angebe
 Dann einfach ausführen:
 ```bash
 claude
+```
+
+## CLI-Verwaltung
+
+### Selbst-Update
+
+Auf neue Versionen prüfen und das Binary direkt aktualisieren:
+
+```bash
+summon update
+```
+
+Der Update-Befehl:
+1. Vergleicht die aktuelle Version mit dem neuesten GitHub-Release
+2. Fragt bei Bedarf nach Bestätigung, wenn eine neuere Version verfügbar ist
+3. Lädt das Binary herunter und ersetzt es automatisch
+
+> Windows: Selbst-Update wird nicht unterstützt. Verwenden Sie stattdessen `install.ps1`.
+
+### Direkte Befehle
+
+Alle Verwaltungsbefehle sind Top-Level-Befehle:
+
+```bash
+summon status          # Aktuellen Status anzeigen
+summon enable          # Proxy aktivieren (settings.json ändern + starten)
+summon disable         # Proxy deaktivieren (stoppen + settings.json wiederherstellen)
+summon start           # Proxy im Hintergrund starten
+summon stop            # Proxy stoppen
+summon add             # Eine Anbieter-Route hinzufügen
+summon remove          # Eine Anbieter-Route entfernen
+summon restore         # settings.json aus Backup wiederherstellen
+```
+
+### Interaktive Konfiguration
+
+Durch Ausführen von `summon configure` wird ein interaktives Menü mit allen verfügbaren Aktionen geöffnet:
+
+```bash
+summon configure
 ```
 
 ## WSL-Nutzung
@@ -455,6 +525,7 @@ journalctl -u summon -f
 - **Modellbasiertes Routing**: Routing-Entscheidung basierend auf dem `model`-Feld in `/v1/messages` POST
 - **SSE-Streaming**: Echtzeit-Passthrough in Blöcken
 - **Gleichzeitige Abonnement-Authentifizierung**: Anthropic-OAuth-Tokens bleiben intakt, nur externe Anbieter verwenden API-Schlüssel
+- **API-Schlüssel-Pool**: Unterstützung mehrerer API-Schlüssel pro Route mit Least-Connections-Verteilung für Anbieter mit Pro-Schlüssel-Gleichzeitigkeits-Begrenzungen
 - **Sicherheit**: Bindet nur an `127.0.0.1`, API-Schlüssel aus Umgebungsvariablen referenziert
 
 ## ⚠️ Bekannte Einschränkungen

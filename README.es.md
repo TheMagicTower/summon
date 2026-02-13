@@ -181,7 +181,37 @@ routes:
 
 - `match`: Coincide si esta cadena está contenida en el nombre del modelo (orden de arriba a abajo, se aplica la primera coincidencia)
 - `${ENV_VAR}`: Referencia a variable de entorno (las claves de API no se escriben directamente en el archivo de configuración)
+- `upstream.auth.pool`: Valores adicionales de claves API para distribución de carga (usa el mismo header que `auth.header`)
+- `concurrency`: Límite de solicitudes concurrentes por clave (cuando se excede, retrocede a Anthropic o devuelve 429)
+- `fallback`: Si retroceder a Anthropic API en caso de fallo del proveedor (predeterminado: `true`)
 - Los modelos que no coinciden se pasan a `default.url` (Anthropic API)
+
+### Grupo de claves API (Manejo de límites de concurrencia)
+
+Algunos proveedores limitan las solicitudes concurrentes por clave API (por ejemplo, GLM-5 permite solo 1 solicitud concurrente por clave). Puede registrar múltiples claves API como un grupo para aumentar la concurrencia total:
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # límite de solicitudes concurrentes por clave
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # claves adicionales (mismo header)
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**Cómo funciona:**
+
+- Las solicitudes se distribuyen a la clave con menos conexiones activas (**Least-Connections**)
+- El uso concurrente de cada clave se rastrea y limita mediante la configuración `concurrency`
+- Cuando todas las claves alcanzan su límite: retrocede a Anthropic (si `fallback: true`) o devuelve HTTP 429
+- Las respuestas de streaming liberan automáticamente la clave cuando termina el flujo
 
 ## Ejecución
 
@@ -218,6 +248,46 @@ Añade a `~/.claude/settings.json` para no necesitar especificar la URL nunca m�
 Luego simplemente ejecuta:
 ```bash
 claude
+```
+
+## Gestión de CLI
+
+### Auto-actualización
+
+Verifica nuevas versiones y actualiza el binario en su lugar:
+
+```bash
+summon update
+```
+
+El comando de actualización:
+1. Compara la versión actual con el último lanzamiento de GitHub
+2. Solicita confirmación si hay una versión más nueva disponible
+3. Descarga y reemplaza el binario automáticamente
+
+> Windows: La auto-actualización no es compatible. Usa `install.ps1` en su lugar.
+
+### Comandos directos
+
+Todos los comandos de gestión son de nivel superior:
+
+```bash
+summon status          # Mostrar estado actual
+summon enable          # Habilitar proxy (modificar settings.json + iniciar)
+summon disable         # Deshabilitar proxy (detener + restaurar settings.json)
+summon start           # Iniciar proxy en segundo plano
+summon stop            # Detener proxy
+summon add             # Agregar una ruta de proveedor
+summon remove          # Eliminar una ruta de proveedor
+summon restore         # Restaurar settings.json desde respaldo
+```
+
+### Configuración interactiva
+
+Ejecutar `summon configure` abre un menú interactivo con todas las acciones disponibles:
+
+```bash
+summon configure
 ```
 
 ## Uso de WSL
@@ -455,6 +525,7 @@ journalctl -u summon -f
 - **Enrutamiento basado en modelos**: Decisión de enrutamiento basada en el campo `model` en `/v1/messages` POST
 - **Transmisión SSE**: Passthrough en tiempo real por fragmentos
 - **Autenticación de suscripción concurrente**: Los tokens OAuth de Anthropic permanecen intactos, solo los proveedores externos usan claves de API
+- **Grupo de claves API**: Soporte para múltiples claves API por ruta con distribución Least-Connections para proveedores con límites de concurrencia por clave
 - **Seguridad**: Se enlaza solo a `127.0.0.1`, claves de API referenciadas desde variables de entorno
 
 ## ⚠️ Limitaciones conocidas

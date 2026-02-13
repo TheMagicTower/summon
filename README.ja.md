@@ -181,7 +181,37 @@ routes:
 
 - `match`: モデル名にこの文字列が含まれている場合にマッチ（上→下の順序、最初のマッチを適用）
 - `${ENV_VAR}`: 環境変数参照（APIキーは設定ファイルに直接記述しません）
+- `upstream.auth.pool`: 負荷分散用の追加APIキー値（`auth.header`と同じヘッダーを使用）
+- `concurrency`: キーごとの同時リクエスト制限（超過時はAnthropicにフォールバックまたは429を返す）
+- `fallback`: プロバイダー障害時にAnthropic APIにフォールバックするかどうか（デフォルト: `true`）
 - マッチしないモデルは`default.url`（Anthropic API）にパススルー
+
+### API キープール（同時実行制限対応）
+
+一部のプロバイダーはAPIキーごとの同時リクエスト数を制限しています（例：GLM-5はキーあたり1つの同時リクエストのみ許可）。複数のAPIキーをプールとして登録し、総同時実行数を増やすことができます：
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # キーごとの同時リクエスト制限
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # 追加キー（同じヘッダー）
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**動作の仕組み:**
+
+- リクエストは最も少ないアクティブ接続を持つキーに配信されます（**Least-Connections**）
+- 各キーの同時使用量は`concurrency`設定によって追跡および制限されます
+- すべてのキーが制限に達すると：Anthropicにフォールバック（`fallback: true`の場合）またはHTTP 429を返す
+- ストリーミングレスポンスはストリーム終了時にキーを自動的に解放します
 
 ## 実行
 
@@ -218,6 +248,46 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 その後、単に実行:
 ```bash
 claude
+```
+
+## CLI管理
+
+### 自己更新
+
+新しいリリースを確認し、バイナリをその場で更新します：
+
+```bash
+summon update
+```
+
+更新コマンドは以下を行います：
+1. 現在のバージョンを最新のGitHubリリースと比較します
+2. 新しいバージョンがある場合は確認を求めます
+3. バイナリを自動的にダウンロードして置き換えます
+
+> Windows: 自己更新はサポートされていません。代わりに`install.ps1`を使用してください。
+
+### 直接コマンド
+
+すべての管理コマンドはトップレベルで使用できます：
+
+```bash
+summon status          # 現在のステータスを表示
+summon enable          # プロキシを有効化（settings.jsonを変更 + 開始）
+summon disable         # プロキシを無効化（停止 + settings.jsonを復元）
+summon start           # バックグラウンドでプロキシを開始
+summon stop            # プロキシを停止
+summon add             # プロバイダールートを追加
+summon remove          # プロバイダールートを削除
+summon restore         # バックアップからsettings.jsonを復元
+```
+
+### 対話型設定
+
+`summon configure`を実行すると、利用可能なすべてのアクションを含む対話型メニューが開きます：
+
+```bash
+summon configure
 ```
 
 ## WSL使用方法
@@ -455,6 +525,7 @@ journalctl -u summon -f
 - **モデルベースルーティング**: `/v1/messages` POSTの`model`フィールドでルーティング決定
 - **SSEストリーミング**: チャンク単位リアルタイムパススルー
 - **サブスクリプション認証併用**: Anthropic OAuthトークンはそのまま維持、外部プロバイダーのみAPIキー置換
+- **APIキープール**: キーごとの同時実行制限があるプロバイダー向けに、Least-Connections分散でルートごとに複数のAPIキーをサポート
 - **セキュリティ**: `127.0.0.1`のみにバインド、APIキーは環境変数参照
 
 ## ⚠️ 既知の制限

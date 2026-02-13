@@ -181,7 +181,37 @@ routes:
 
 - `match`: 如果模型名包含此字符串则匹配（从上到下顺序，应用第一个匹配）
 - `${ENV_VAR}`: 环境变量引用（API密钥不直接写入配置文件）
+- `upstream.auth.pool`: 用于负载均衡的额外API密钥值（使用与`auth.header`相同的头部）
+- `concurrency`: 每个密钥的并发请求限制（超过时回退到Anthropic或返回429）
+- `fallback`: 提供商失败时是否回退到Anthropic API（默认：`true`）
 - 不匹配的模型透传到`default.url`（Anthropic API）
+
+### API 密钥池（并发限制处理）
+
+某些提供商限制每个API密钥的并发请求数（例如：GLM-5每个密钥仅允许1个并发请求）。可以将多个API密钥注册为池以提高总并发数：
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # 每个密钥的并发请求限制
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # 额外密钥（相同的头部）
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**工作原理：**
+
+- 请求被分发到活动连接最少的密钥（**Least-Connections**）
+- 每个密钥的并发使用量由`concurrency`设置跟踪和限制
+- 当所有密钥都达到限制时：回退到Anthropic（如果`fallback: true`）或返回HTTP 429
+- 流式响应在流结束时自动释放密钥
 
 ## 运行
 
@@ -218,6 +248,46 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:18081 claude
 然后直接运行：
 ```bash
 claude
+```
+
+## CLI管理
+
+### 自我更新
+
+检查新版本并原地更新二进制文件：
+
+```bash
+summon update
+```
+
+更新命令会：
+1. 将当前版本与最新的GitHub发布版本进行比较
+2. 如果有新版本可用，提示确认
+3. 自动下载并替换二进制文件
+
+> Windows: 不支持自我更新。请改用`install.ps1`。
+
+### 直接命令
+
+所有管理命令都是顶级命令：
+
+```bash
+summon status          # 显示当前状态
+summon enable          # 启用代理（修改settings.json + 启动）
+summon disable         # 禁用代理（停止 + 恢复settings.json）
+summon start           # 在后台启动代理
+summon stop            # 停止代理
+summon add             # 添加提供商路由
+summon remove          # 删除提供商路由
+summon restore         # 从备份恢复settings.json
+```
+
+### 交互式配置
+
+运行`summon configure`会打开包含所有可用操作的交互式菜单：
+
+```bash
+summon configure
 ```
 
 ## WSL使用方法
@@ -455,6 +525,7 @@ journalctl -u summon -f
 - **基于模型的路由**：基于`/v1/messages` POST中的`model`字段进行路由决策
 - **SSE流式传输**：按块实时透传
 - **并发订阅身份验证**：Anthropic OAuth令牌保持不变，仅外部提供商使用API密钥
+- **API密钥池**：为有每密钥并发限制的提供商提供支持，通过Least-Connections分配实现每个路由多个API密钥
 - **安全性**：仅绑定到`127.0.0.1`，API密钥从环境变量引用
 
 ## ⚠️ 已知限制
