@@ -110,7 +110,19 @@
       "match": "Substring match against the model field. If the model name contains this string, the route matches.",
       "upstreamUrl": "Target URL for matched requests.",
       "authHeader": "HTTP header name for authentication (e.g., x-api-key, Authorization).",
-      "authValue": "Authentication value. Supports ${VAR} environment variable references."
+      "authValue": "Authentication value. Supports ${VAR} environment variable references.",
+      "authPool": "Additional API key values for load distribution. Uses the same header as auth.header.",
+      "concurrency": "Per-key concurrent request limit. When all keys reach the limit, falls back to Anthropic (if fallback enabled) or returns 429.",
+      "fallback": "Whether to fall back to Anthropic API on provider failure (default: true)."
+    },
+    "keyPool": {
+      "title": "API Key Pool",
+      "description": "Some providers limit concurrent requests per API key (e.g., GLM-5 allows only 1 concurrent request per key). Register multiple API keys as a pool to increase total concurrency.",
+      "howItWorks": "How it works",
+      "rule1": "Requests are distributed to the key with the fewest active connections (Least-Connections).",
+      "rule2": "Each key's concurrent usage is tracked and limited by the concurrency setting.",
+      "rule3": "When all keys reach their limit: fallback to Anthropic (if enabled) or return HTTP 429.",
+      "rule4": "Streaming responses automatically release the key when the stream ends."
     },
     "env": {
       "title": "Environment Variables",

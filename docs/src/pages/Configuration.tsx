@@ -175,6 +175,37 @@ routes:
           <li><code className="text-foreground">upstream.url</code>: {t("configuration.fields.upstreamUrl")}</li>
           <li><code className="text-foreground">upstream.auth.header</code>: {t("configuration.fields.authHeader")}</li>
           <li><code className="text-foreground">upstream.auth.value</code>: {t("configuration.fields.authValue")}</li>
+          <li><code className="text-foreground">upstream.auth.pool</code>: {t("configuration.fields.authPool")}</li>
+          <li><code className="text-foreground">concurrency</code>: {t("configuration.fields.concurrency")}</li>
+          <li><code className="text-foreground">fallback</code>: {t("configuration.fields.fallback")}</li>
+        </ul>
+      </section>
+
+      {/* Key Pool */}
+      <section className="space-y-4" id="key-pool">
+        <h2 className="text-2xl font-semibold">{t("configuration.keyPool.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("configuration.keyPool.description")}</p>
+
+        <CodeBlock language="yaml" title="config.yaml">{`routes:
+  - match: "glm-5"
+    concurrency: 1           # per-key concurrent request limit
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer \${GLM_KEY_1}"
+        pool:                 # additional keys
+          - "Bearer \${GLM_KEY_2}"
+          - "Bearer \${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"`}</CodeBlock>
+
+        <h3 className="text-lg font-medium">{t("configuration.keyPool.howItWorks")}</h3>
+        <ul className="list-disc pl-6 space-y-1 text-sm text-muted-foreground">
+          <li>{t("configuration.keyPool.rule1")}</li>
+          <li>{t("configuration.keyPool.rule2")}</li>
+          <li>{t("configuration.keyPool.rule3")}</li>
+          <li>{t("configuration.keyPool.rule4")}</li>
         </ul>
       </section>
 
