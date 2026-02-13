@@ -1,11 +1,15 @@
 mod config;
 mod configure;
+mod pool;
 mod proxy;
 mod transformer;
 mod update;
 
 use clap::{Parser, Subcommand};
+use std::sync::Arc;
+
 use config::Config;
+use pool::KeyPool;
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
@@ -22,6 +26,7 @@ pub type HttpClient = Client<hyper_rustls::HttpsConnector<hyper_util::client::le
 pub struct AppState {
     pub config: Config,
     pub client: HttpClient,
+    pub key_pool: Arc<KeyPool>,
 }
 
 #[derive(Parser)]
@@ -122,9 +127,10 @@ async fn run_server(config_path: &str) {
         .build();
     let client: HttpClient = Client::builder(TokioExecutor::new()).build(https);
 
-    // 4. AppState 생성 및 바인딩 주소 추출
+    // 4. 키 풀 초기화 및 AppState 생성
+    let key_pool = Arc::new(KeyPool::from_config(&config));
     let addr = format!("{}:{}", config.server.host, config.server.port);
-    let state = AppState { config: config.clone(), client };
+    let state = AppState { config: config.clone(), client, key_pool };
 
     // 5. axum 라우터 구성
     let app = Router::new()

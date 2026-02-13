@@ -447,11 +447,13 @@ fn add_route(config_path: &str) {
                 client_secret: None,
                 refresh_token: None,
                 token_url: None,
+                pool: None,
             },
         },
         transformer: None,
         model_map: None,
         fallback: true,
+        concurrency: None,
     };
 
     config.routes.push(route);
