@@ -110,7 +110,19 @@
       "match": "Khớp chuỗi con với trường model. Nếu tên model chứa chuỗi này thì khớp.",
       "upstreamUrl": "URL đích cho các yêu cầu đã khớp.",
       "authHeader": "Tên header HTTP xác thực (ví dụ: x-api-key, Authorization).",
-      "authValue": "Giá trị xác thực. Hỗ trợ tham chiếu biến môi trường ${VAR}."
+      "authValue": "Giá trị xác thực. Hỗ trợ tham chiếu biến môi trường ${VAR}.",
+      "authPool": "Danh sách giá trị API key bổ sung để phân phối tải. Sử dụng cùng header với auth.header.",
+      "concurrency": "Giới hạn yêu cầu đồng thời trên mỗi key. Khi tất cả key đạt giới hạn, chuyển sang Anthropic API (nếu bật) hoặc trả về 429.",
+      "fallback": "Có chuyển sang Anthropic API khi nhà cung cấp gặp lỗi không (mặc định: true)."
+    },
+    "keyPool": {
+      "title": "Pool API Key",
+      "description": "Một số nhà cung cấp giới hạn số yêu cầu đồng thời trên mỗi API key (ví dụ: GLM-5 chỉ cho phép 1 yêu cầu đồng thời mỗi key). Đăng ký nhiều API key dưới dạng pool để tăng dung lượng đồng thời tổng thể.",
+      "howItWorks": "Cách hoạt động",
+      "rule1": "Yêu cầu được phân phối đến key có ít kết nối hoạt động nhất (Least-Connections).",
+      "rule2": "Mức sử dụng đồng thời của mỗi key được theo dõi và giới hạn bởi cài đặt concurrency.",
+      "rule3": "Khi tất cả key đạt giới hạn: chuyển sang Anthropic (nếu bật) hoặc trả về HTTP 429.",
+      "rule4": "Phản hồi streaming tự động giải phóng key khi stream kết thúc."
     },
     "env": {
       "title": "Biến môi trường",

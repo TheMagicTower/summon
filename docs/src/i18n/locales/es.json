@@ -110,7 +110,19 @@
       "match": "Coincidencia de subcadena contra el campo model. Si el nombre del modelo contiene esta cadena, la ruta coincide.",
       "upstreamUrl": "URL de destino para solicitudes coincidentes.",
       "authHeader": "Nombre del encabezado HTTP de autenticación (ej: x-api-key, Authorization).",
-      "authValue": "Valor de autenticación. Soporta referencias de variables de entorno ${VAR}."
+      "authValue": "Valor de autenticación. Soporta referencias de variables de entorno ${VAR}.",
+      "authPool": "Valores de API key adicionales para distribución de carga. Usa el mismo encabezado que auth.header.",
+      "concurrency": "Límite de solicitudes concurrentes por clave. Cuando todas las claves alcanzan el límite, recurre a Anthropic API (si está habilitado) o devuelve 429.",
+      "fallback": "Si recurrir a Anthropic API en caso de fallo del proveedor (predeterminado: true)."
+    },
+    "keyPool": {
+      "title": "Pool de API Keys",
+      "description": "Algunos proveedores limitan las solicitudes concurrentes por API key (por ejemplo, GLM-5 permite solo 1 solicitud concurrente por clave). Registre múltiples API keys como un pool para aumentar la capacidad total de concurrencia.",
+      "howItWorks": "Cómo funciona",
+      "rule1": "Las solicitudes se distribuyen a la clave con menos conexiones activas (Least-Connections).",
+      "rule2": "El uso concurrente de cada clave se rastrea y limita mediante la configuración de concurrency.",
+      "rule3": "Cuando todas las claves alcanzan su límite: recurre a Anthropic (si está habilitado) o devuelve HTTP 429.",
+      "rule4": "Las respuestas de streaming liberan automáticamente la clave cuando el stream termina."
     },
     "env": {
       "title": "Variables de entorno",

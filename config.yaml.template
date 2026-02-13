@@ -23,3 +23,31 @@ routes:
       auth:
         header: "Authorization"
         value: "Bearer ${KIMI_API_KEY}"
+
+  # === 키 풀 예시 (모델별 동시 요청 제한 대응) ===
+  #
+  # GLM-5: API 키당 동시 1개 제한
+  # → 3개 키를 풀로 등록하면 최대 3개 동시 요청 가능
+  # - match: "glm-5"
+  #   concurrency: 1           # 키당 동시 요청 제한
+  #   upstream:
+  #     url: "https://open.bigmodel.cn/api/paas/v4"
+  #     auth:
+  #       header: "Authorization"
+  #       value: "Bearer ${GLM_KEY_1}"
+  #       pool:                 # 추가 키 목록 (value와 동일 형식)
+  #         - "Bearer ${GLM_KEY_2}"
+  #         - "Bearer ${GLM_KEY_3}"
+  #   transformer: "openai"
+  #   model_map: "glm-5"
+  #
+  # GLM-4-Plus: API 키당 동시 20개 제한 (풀 불필요할 수 있음)
+  # - match: "glm-4-plus"
+  #   concurrency: 20
+  #   upstream:
+  #     url: "https://open.bigmodel.cn/api/paas/v4"
+  #     auth:
+  #       header: "Authorization"
+  #       value: "Bearer ${GLM_KEY_1}"
+  #   transformer: "openai"
+  #   model_map: "glm-4-plus"

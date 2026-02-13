@@ -38,6 +38,11 @@ pub struct AuthConfig {
     pub refresh_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token_url: Option<String>,
+
+    /// 추가 API 키 풀 (같은 header, 다른 value)
+    /// Least-Connections 방식으로 분배됨
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pool: Option<Vec<String>>,
 }
 
 fn default_auth_type() -> String {
@@ -65,6 +70,20 @@ impl AuthConfig {
     pub fn header_value(&self) -> &str {
         self.value.as_deref().unwrap_or("")
     }
+
+    /// 키 풀이 설정되어 있는지 확인
+    pub fn has_pool(&self) -> bool {
+        self.pool.as_ref().is_some_and(|p| !p.is_empty())
+    }
+
+    /// 기본 value + pool을 합친 전체 키 목록
+    pub fn all_values(&self) -> Vec<String> {
+        let mut keys = vec![self.header_value().to_string()];
+        if let Some(pool) = &self.pool {
+            keys.extend(pool.iter().cloned());
+        }
+        keys
+    }
 }
 
 /// 업스트림 제공자 설정
@@ -90,6 +109,10 @@ pub struct RouteConfig {
     /// 외부 제공자 실패 시 Anthropic API로 폴백 (기본값: true)
     #[serde(default = "default_true", skip_serializing_if = "is_true")]
     pub fallback: bool,
+    /// API 키당 동시 요청 제한 (기본값: 제한 없음)
+    /// 예: GLM-5는 키당 1개, GLM-4-Plus는 키당 20개
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub concurrency: Option<usize>,
 }
 
 /// 최상위 설정
@@ -139,9 +162,12 @@ impl Config {
         Ok(())
     }
 
-    /// 모델명으로 라우트 검색 (첫 번째 매칭 반환)
-    pub fn find_route(&self, model: &str) -> Option<&RouteConfig> {
-        self.routes.iter().find(|r| model.contains(&r.match_pattern))
+    /// 모델명으로 라우트 검색 (첫 번째 매칭의 인덱스 + 참조 반환)
+    pub fn find_route(&self, model: &str) -> Option<(usize, &RouteConfig)> {
+        self.routes
+            .iter()
+            .enumerate()
+            .find(|(_, r)| model.contains(&r.match_pattern))
     }
 
     /// XDG Base Directory 준수 설정 파일 검색
@@ -301,9 +327,11 @@ routes:
     #[test]
     fn test_find_route_matches() {
         let config = make_test_config();
-        let route = config.find_route("zai-model-v1");
-        assert!(route.is_some());
-        assert_eq!(route.unwrap().upstream.url, "https://api.z.ai");
+        let result = config.find_route("zai-model-v1");
+        assert!(result.is_some());
+        let (idx, route) = result.unwrap();
+        assert_eq!(idx, 0);
+        assert_eq!(route.upstream.url, "https://api.z.ai");
     }
 
     /// find_route: 매칭 안 되는 경우 → None
@@ -378,11 +406,13 @@ routes:
                             client_secret: None,
                             refresh_token: None,
                             token_url: None,
+                            pool: None,
                         },
                     },
                     transformer: None,
                     model_map: None,
                     fallback: true,
+                    concurrency: None,
                 },
                 RouteConfig {
                     match_pattern: "kimi".into(),
@@ -396,15 +426,18 @@ routes:
                             client_secret: None,
                             refresh_token: None,
                             token_url: None,
+                            pool: None,
                         },
                     },
                     transformer: None,
                     model_map: None,
                     fallback: true,
+                    concurrency: None,
                 },
             ],
         };
-        let route = config.find_route("kimi-latest").unwrap();
+        let (idx, route) = config.find_route("kimi-latest").unwrap();
+        assert_eq!(idx, 0);
         assert_eq!(route.upstream.url, "https://first.example.com");
     }
 
@@ -430,11 +463,13 @@ routes:
                         client_secret: None,
                         refresh_token: None,
                         token_url: None,
+                        pool: None,
                     },
                 },
                 transformer: None,
                 model_map: None,
                 fallback: true,
+                concurrency: None,
             }],
         }
     }

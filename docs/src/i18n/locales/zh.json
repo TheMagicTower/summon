@@ -110,7 +110,19 @@
       "match": "对 model 字段的子字符串匹配。如果模型名称包含此字符串则匹配。",
       "upstreamUrl": "匹配请求的目标 URL。",
       "authHeader": "认证 HTTP 头名称（例如：x-api-key、Authorization）。",
-      "authValue": "认证值。支持 ${VAR} 环境变量引用。"
+      "authValue": "认证值。支持 ${VAR} 环境变量引用。",
+      "authPool": "用于负载分配的附加 API 密钥值列表。使用与 auth.header 相同的请求头。",
+      "concurrency": "每个密钥的并发请求限制。所有密钥达到限制时，回退到 Anthropic API（如已启用）或返回 429。",
+      "fallback": "提供商失败时是否回退到 Anthropic API（默认：true）。"
+    },
+    "keyPool": {
+      "title": "API 密钥池",
+      "description": "部分提供商限制每个 API 密钥的并发请求数（例如：GLM-5 每个密钥仅允许 1 个并发请求）。将多个 API 密钥注册为池，可增加总并发容量。",
+      "howItWorks": "工作原理",
+      "rule1": "请求被分配到活跃连接最少的密钥（最少连接数）。",
+      "rule2": "每个密钥的并发使用量由 concurrency 设置跟踪和限制。",
+      "rule3": "所有密钥达到限制时：回退到 Anthropic（如已启用）或返回 HTTP 429。",
+      "rule4": "流式响应在流结束时自动释放密钥。"
     },
     "env": {
       "title": "环境变量",

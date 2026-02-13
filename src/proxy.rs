@@ -9,6 +9,7 @@ use uuid::Uuid;
 use std::sync::Arc;
 
 use crate::config::RouteConfig;
+use crate::pool::PoolGuard;
 use crate::transformer::{self, StreamContext, Transformer};
 use crate::AppState;
 
@@ -51,48 +52,125 @@ pub async fn proxy_handler(
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
     if !is_messages {
-        return forward(&state, &parts, bytes, None).await;
+        return forward(&state, &parts, bytes, None, None).await;
     }
 
     let model = extract_model(&bytes)?;
-    let route = state.config.find_route(&model);
+    let route_match = state.config.find_route(&model);
 
-    tracing::info!(model = %model, routed = route.is_some(), "라우팅 결정");
+    tracing::info!(model = %model, routed = route_match.is_some(), "라우팅 결정");
+
+    // 키 풀에서 키 획득
+    let (route, auth_value, pool_guard) = match route_match {
+        Some((route_idx, route)) => {
+            match state.key_pool.acquire(route_idx) {
+                Some(key_idx) => {
+                    let values = route.upstream.auth.all_values();
+                    let selected = values[key_idx].clone();
+                    let guard = PoolGuard::new(state.key_pool.clone(), route_idx, key_idx);
+                    tracing::debug!(route_idx, key_idx, "키 풀에서 키 선택");
+                    (Some(route), Some(selected), Some(guard))
+                }
+                None => {
+                    // 풀이 없거나 모든 키가 concurrency 제한 도달
+                    if route.upstream.auth.has_pool() {
+                        tracing::warn!(
+                            model = %model,
+                            "모든 API 키가 동시 요청 제한에 도달"
+                        );
+                        if route.fallback {
+                            tracing::info!("Anthropic API로 폴백");
+                            return forward(&state, &parts, bytes, None, None).await;
+                        } else {
+                            return Err(StatusCode::TOO_MANY_REQUESTS);
+                        }
+                    }
+                    // 풀이 없으면 기존 auth 사용
+                    (Some(route), None, None)
+                }
+            }
+        }
+        None => (None, None, None),
+    };
+
+    let auth_override = auth_value.as_deref();
 
     match route {
         Some(route) if route.fallback => {
             // 폴백 활성화: 외부 제공자 실패 시 Anthropic API로 재시도
-            match forward(&state, &parts, bytes.clone(), Some(route)).await {
-                Ok(resp) if resp.status().is_success() => Ok(resp),
+            match forward(&state, &parts, bytes.clone(), Some(route), auth_override).await {
+                Ok(resp) if resp.status().is_success() => {
+                    Ok(attach_guard(resp, pool_guard))
+                }
                 Ok(resp) => {
                     tracing::warn!(
                         status = %resp.status(),
                         "외부 제공자 비성공 응답, Anthropic API로 폴백"
                     );
-                    forward(&state, &parts, bytes, None).await
+                    drop(pool_guard);
+                    forward(&state, &parts, bytes, None, None).await
                 }
                 Err(_) => {
                     tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
-                    forward(&state, &parts, bytes, None).await
+                    drop(pool_guard);
+                    forward(&state, &parts, bytes, None, None).await
                 }
             }
         }
         _ => {
             // 폴백 비활성화 또는 라우팅 미매칭: 기존 동작 유지
-            forward(&state, &parts, bytes, route).await
+            let resp = forward(&state, &parts, bytes, route, auth_override).await?;
+            Ok(attach_guard(resp, pool_guard))
         }
     }
+}
+
+/// 응답 Body에 PoolGuard를 부착하여 스트림 종료 시 자동 해제
+fn attach_guard(resp: Response<Body>, guard: Option<PoolGuard>) -> Response<Body> {
+    match guard {
+        None => resp,
+        Some(guard) => {
+            let (parts, body) = resp.into_parts();
+            let guarded = wrap_body_with_guard(body, guard);
+            Response::from_parts(parts, guarded)
+        }
+    }
+}
+
+/// Body를 PoolGuard와 함께 감싸서 스트림 종료 시 가드 해제
+fn wrap_body_with_guard(body: Body, guard: PoolGuard) -> Body {
+    let stream = async_stream::stream! {
+        let _guard = guard;
+        let mut body = body;
+        loop {
+            match body.frame().await {
+                Some(Ok(frame)) => {
+                    if let Ok(data) = frame.into_data() {
+                        yield Ok::<Bytes, std::io::Error>(data);
+                    }
+                }
+                Some(Err(e)) => {
+                    tracing::error!(error = %e, "응답 스트림 읽기 오류");
+                    break;
+                }
+                None => break,
+            }
+        }
+    };
+    Body::from_stream(stream)
 }
 
 /// 업스트림으로 요청 포워딩
 /// - route가 Some이고 transformer가 있으면 프로토콜 변환
 /// - route가 Some이고 transformer가 없으면 라우팅만 (인증 헤더 교체)
 /// - route가 None이면 기본 Anthropic API로 패스스루
+/// - auth_value_override가 Some이면 풀에서 선택된 키 값 사용
 async fn forward(
     state: &AppState,
     parts: &axum::http::request::Parts,
     body_bytes: Bytes,
     route: Option<&RouteConfig>,
+    auth_value_override: Option<&str>,
 ) -> Result<Response<Body>, StatusCode> {
     // 트랜스포머 결정
     let transformer_opt: Option<Arc<dyn Transformer>> = route
@@ -102,7 +180,7 @@ async fn forward(
 
     // 트랜스포머가 있으면 변환 분기
     if let Some(ref tf) = transformer_opt {
-        return forward_with_transform(state, parts, body_bytes, route.unwrap(), tf.clone()).await;
+        return forward_with_transform(state, parts, body_bytes, route.unwrap(), tf.clone(), auth_value_override).await;
     }
 
     // 기존 패스스루/라우팅 로직
@@ -135,10 +213,8 @@ async fn forward(
 
     // 라우팅 시 새 인증 헤더 추가
     if let Some(r) = route {
-        builder = builder.header(
-            r.upstream.auth.header_name(),
-            r.upstream.auth.header_value(),
-        );
+        let value = auth_value_override.unwrap_or_else(|| r.upstream.auth.header_value());
+        builder = builder.header(r.upstream.auth.header_name(), value);
     }
 
     let req = builder
@@ -163,6 +239,7 @@ async fn forward_with_transform(
     body_bytes: Bytes,
     route: &RouteConfig,
     transformer: Arc<dyn Transformer>,
+    auth_value_override: Option<&str>,
 ) -> Result<Response<Body>, StatusCode> {
     // 원본 본문 파싱
     let body_json: serde_json::Value =
@@ -205,11 +282,9 @@ async fn forward_with_transform(
         builder = builder.header(key, value);
     }
 
-    // 인증 헤더 추가
-    builder = builder.header(
-        route.upstream.auth.header_name(),
-        route.upstream.auth.header_value(),
-    );
+    // 인증 헤더 추가 (풀 오버라이드 적용)
+    let auth_value = auth_value_override.unwrap_or_else(|| route.upstream.auth.header_value());
+    builder = builder.header(route.upstream.auth.header_name(), auth_value);
 
     // 추가 헤더
     for (name, value) in &transformed.extra_headers {

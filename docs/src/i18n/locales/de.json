@@ -110,7 +110,19 @@
       "match": "Teilzeichenfolgen-Abgleich gegen das model-Feld. Wenn der Modellname diese Zeichenkette enthält, passt die Route.",
       "upstreamUrl": "Ziel-URL für übereinstimmende Anfragen.",
       "authHeader": "Name des HTTP-Authentifizierungs-Headers (z.B. x-api-key, Authorization).",
-      "authValue": "Authentifizierungswert. Unterstützt ${VAR} Umgebungsvariablen-Referenzen."
+      "authValue": "Authentifizierungswert. Unterstützt ${VAR} Umgebungsvariablen-Referenzen.",
+      "authPool": "Zusätzliche API-Schlüsselwerte zur Lastverteilung. Verwendet denselben Header wie auth.header.",
+      "concurrency": "Gleichzeitige Anfragen pro Schlüssel. Wenn alle Schlüssel das Limit erreichen, wird auf Anthropic API zurückgegriffen (falls aktiviert) oder 429 zurückgegeben.",
+      "fallback": "Ob bei Anbieterausfall auf Anthropic API zurückgegriffen werden soll (Standard: true)."
+    },
+    "keyPool": {
+      "title": "API-Schlüssel-Pool",
+      "description": "Einige Anbieter begrenzen gleichzeitige Anfragen pro API-Schlüssel (z.B. GLM-5 erlaubt nur 1 gleichzeitige Anfrage pro Schlüssel). Registrieren Sie mehrere API-Schlüssel als Pool, um die Gesamtkapazität zu erhöhen.",
+      "howItWorks": "Funktionsweise",
+      "rule1": "Anfragen werden an den Schlüssel mit den wenigsten aktiven Verbindungen verteilt (Least-Connections).",
+      "rule2": "Die gleichzeitige Nutzung jedes Schlüssels wird durch die concurrency-Einstellung verfolgt und begrenzt.",
+      "rule3": "Wenn alle Schlüssel ihr Limit erreichen: Rückfall auf Anthropic (falls aktiviert) oder HTTP 429.",
+      "rule4": "Streaming-Antworten geben den Schlüssel automatisch frei, wenn der Stream endet."
     },
     "env": {
       "title": "Umgebungsvariablen",

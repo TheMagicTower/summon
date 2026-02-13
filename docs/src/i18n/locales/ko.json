@@ -110,7 +110,19 @@
       "match": "model 필드에 대한 부분 문자열 매칭. 모델 이름에 이 문자열이 포함되면 매칭됩니다.",
       "upstreamUrl": "매칭된 요청의 대상 URL.",
       "authHeader": "인증 HTTP 헤더 이름 (예: x-api-key, Authorization).",
-      "authValue": "인증 값. ${VAR} 환경변수 참조를 지원합니다."
+      "authValue": "인증 값. ${VAR} 환경변수 참조를 지원합니다.",
+      "authPool": "부하 분산을 위한 추가 API 키 값 목록. auth.header와 동일한 헤더를 사용합니다.",
+      "concurrency": "키당 동시 요청 제한. 모든 키가 제한에 도달하면 Anthropic API로 폴백(활성화 시)하거나 429를 반환합니다.",
+      "fallback": "제공자 실패 시 Anthropic API로 폴백 여부 (기본값: true)."
+    },
+    "keyPool": {
+      "title": "API 키 풀",
+      "description": "일부 제공자는 API 키당 동시 요청 수를 제한합니다 (예: GLM-5는 키당 동시 1개). 여러 API 키를 풀로 등록하면 총 동시 처리 용량을 늘릴 수 있습니다.",
+      "howItWorks": "동작 방식",
+      "rule1": "활성 연결이 가장 적은 키로 요청을 분배합니다 (Least-Connections).",
+      "rule2": "각 키의 동시 사용량은 concurrency 설정에 의해 추적 및 제한됩니다.",
+      "rule3": "모든 키가 제한에 도달하면: Anthropic으로 폴백(활성화 시) 또는 HTTP 429를 반환합니다.",
+      "rule4": "스트리밍 응답은 스트림 종료 시 자동으로 키를 반환합니다."
     },
     "env": {
       "title": "환경변수",
