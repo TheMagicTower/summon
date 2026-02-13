@@ -181,7 +181,37 @@ routes:
 
 - `match`: Matches if this string is contained in the model name (top to bottom order, first match applies)
 - `${ENV_VAR}`: Environment variable reference (API keys are not written directly in the configuration file)
+- `upstream.auth.pool`: Additional API key values for load distribution (same header as `auth.header`)
+- `concurrency`: Per-key concurrent request limit (when exceeded, falls back to Anthropic or returns 429)
+- `fallback`: Whether to fall back to Anthropic API on provider failure (default: `true`)
 - Models that don't match are passed through to `default.url` (Anthropic API)
+
+### API Key Pool (Concurrency Limit Handling)
+
+Some providers limit concurrent requests per API key (e.g., GLM-5 allows only 1 concurrent request per key). Register multiple API keys as a pool to increase total concurrency:
+
+```yaml
+routes:
+  - match: "glm-5"
+    concurrency: 1           # per-key concurrent request limit
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                 # additional keys (same header)
+          - "Bearer ${GLM_KEY_2}"
+          - "Bearer ${GLM_KEY_3}"
+    transformer: "openai"
+    model_map: "glm-5"
+```
+
+**How it works:**
+
+- Requests are distributed to the key with the fewest active connections (**Least-Connections**)
+- Each key's concurrent usage is tracked and limited by the `concurrency` setting
+- When all keys reach their limit: fallback to Anthropic (if `fallback: true`) or return HTTP 429
+- Streaming responses automatically release the key when the stream ends
 
 ## Running
 
@@ -495,6 +525,7 @@ journalctl -u summon -f
 - **Model-based Routing**: Routing decision based on `model` field in `/v1/messages` POST
 - **SSE Streaming**: Real-time passthrough in chunks
 - **Concurrent Subscription Auth**: Anthropic OAuth tokens remain intact, only external providers use API keys
+- **API Key Pool**: Multiple API keys per route with Least-Connections distribution for providers with per-key concurrency limits
 - **Security**: Binds only to `127.0.0.1`, API keys referenced from environment variables
 
 ## ⚠️ Known Limitations
