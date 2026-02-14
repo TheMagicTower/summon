@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::config::Config;
@@ -7,13 +8,18 @@ use crate::config::Config;
 /// 기본 쿨다운 시간 (Retry-After 헤더가 없을 때)
 const DEFAULT_COOLDOWN_SECS: u64 = 60;
 
-/// 라우트별 API 키 풀 — Least-Connections 방식 분배
+/// 라우트별 API 키 풀 — Least-Connections 방식 분배 + 세션 친화
 ///
 /// 각 라우트의 `auth.pool`에 복수 키가 설정된 경우,
 /// 키당 활성 연결 수를 추적하고 가장 여유 있는 키를 선택한다.
 /// `concurrency` 제한이 있으면 해당 키의 활성 연결이 제한에 도달하면 건너뛴다.
+///
+/// 세션 친화: 동일한 세션(인증 토큰 해시)에 대해 동일한 API 키를 재사용하여
+/// 프롬프트 캐시를 효과적으로 활용한다.
 pub struct KeyPool {
     entries: Vec<Option<PoolEntry>>,
+    /// 세션별 키 고정 매핑: route_idx별 (session_hash → key_idx)
+    session_map: Vec<Option<Mutex<HashMap<u64, usize>>>>,
 }
 
 struct PoolEntry {
@@ -38,7 +44,7 @@ fn now_epoch_secs() -> u64 {
 impl KeyPool {
     /// Config로부터 KeyPool 생성
     pub fn from_config(config: &Config) -> Self {
-        let entries = config
+        let entries: Vec<Option<PoolEntry>> = config
             .routes
             .iter()
             .map(|route| {
@@ -55,7 +61,13 @@ impl KeyPool {
                 }
             })
             .collect();
-        KeyPool { entries }
+
+        let session_map = entries
+            .iter()
+            .map(|e| e.as_ref().map(|_| Mutex::new(HashMap::new())))
+            .collect();
+
+        KeyPool { entries, session_map }
     }
 
     /// Least-Connections 방식으로 키 획득
@@ -95,6 +107,52 @@ impl KeyPool {
             }
             None => None, // 모든 키가 제한 또는 쿨다운 중
         }
+    }
+
+    /// 세션 친화적 키 획득
+    ///
+    /// 동일한 세션(인증 토큰 해시)에서 온 요청에 대해 동일한 API 키를 재사용하여
+    /// 프롬프트 캐시를 효과적으로 활용한다.
+    /// - 캐시된 키가 사용 가능하면 재사용
+    /// - 캐시된 키가 일시 사용 불가(쿨다운/동시 요청 제한)이면 LC로 대체 (매핑 유지)
+    /// - 매핑이 없으면 LC로 할당 후 매핑 저장
+    pub fn acquire_sticky(&self, route_idx: usize, session_hash: u64) -> Option<usize> {
+        let entry = self.entries.get(route_idx)?.as_ref()?;
+        let limit = entry.concurrency.unwrap_or(usize::MAX);
+        let now = now_epoch_secs();
+
+        // 1. 세션 매핑에서 캐시된 키 조회
+        let cached = self.session_map.get(route_idx)
+            .and_then(|opt| opt.as_ref())
+            .and_then(|smap| smap.lock().ok())
+            .and_then(|map| map.get(&session_hash).copied());
+
+        if let Some(cached_idx) = cached {
+            // 캐시된 키가 유효하고 사용 가능한지 확인
+            if cached_idx < entry.active.len()
+                && entry.cooldown_until[cached_idx].load(Ordering::Relaxed) <= now
+            {
+                let count = entry.active[cached_idx].load(Ordering::Relaxed);
+                if count < limit {
+                    entry.active[cached_idx].fetch_add(1, Ordering::Relaxed);
+                    tracing::debug!(route_idx, key_idx = cached_idx, "세션 친화 키 재사용");
+                    return Some(cached_idx);
+                }
+            }
+            // 캐시된 키 일시 사용 불가 → LC로 대체 (매핑 유지)
+            tracing::debug!(route_idx, cached_idx, "세션 친화 키 일시 사용 불가, LC 대체");
+            return self.acquire(route_idx);
+        }
+
+        // 2. 매핑 없음 → LC로 할당 후 매핑 저장
+        let idx = self.acquire(route_idx)?;
+        if let Some(Some(smap)) = self.session_map.get(route_idx) {
+            if let Ok(mut map) = smap.lock() {
+                map.insert(session_hash, idx);
+                tracing::debug!(route_idx, key_idx = idx, "세션 친화 키 신규 할당");
+            }
+        }
+        Some(idx)
     }
 
     /// 특정 키를 제외하고 Least-Connections 방식으로 키 획득
@@ -446,5 +504,65 @@ mod tests {
         let k = pool.acquire_excluding(0, &[0]).unwrap();
         assert_eq!(k, 2, "key 0 제외 + key 1 쿨다운 → key 2만 사용 가능");
         pool.release(0, k);
+    }
+
+    #[test]
+    fn test_sticky_same_session_reuses_key() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        let session: u64 = 12345;
+
+        // 첫 요청: LC로 키 할당 → 매핑 저장
+        let k1 = pool.acquire_sticky(0, session).unwrap();
+        pool.release(0, k1);
+
+        // 동일 세션: 캐시된 키 재사용
+        let k2 = pool.acquire_sticky(0, session).unwrap();
+        assert_eq!(k1, k2, "동일 세션은 동일 키를 재사용해야 함");
+        pool.release(0, k2);
+
+        // 3번째도 동일
+        let k3 = pool.acquire_sticky(0, session).unwrap();
+        assert_eq!(k1, k3, "세션 친화 키가 계속 유지되어야 함");
+        pool.release(0, k3);
+    }
+
+    #[test]
+    fn test_sticky_different_sessions_get_different_keys() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        let session_a: u64 = 11111;
+        let session_b: u64 = 22222;
+
+        let ka = pool.acquire_sticky(0, session_a).unwrap();
+        pool.release(0, ka);
+
+        let kb = pool.acquire_sticky(0, session_b).unwrap();
+        pool.release(0, kb);
+
+        // LC 라운드 로빈에 의해 다른 키가 할당되어야 함
+        assert_ne!(ka, kb, "다른 세션은 다른 키를 할당받아야 함");
+    }
+
+    #[test]
+    fn test_sticky_cooldown_falls_back_to_lc() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        let session: u64 = 99999;
+
+        // 첫 요청: key 할당
+        let k1 = pool.acquire_sticky(0, session).unwrap();
+        pool.release(0, k1);
+
+        // 해당 키 쿨다운 설정
+        pool.set_cooldown(0, k1, Some(60));
+
+        // 동일 세션: 캐시된 키가 쿨다운 → LC로 대체
+        let k2 = pool.acquire_sticky(0, session).unwrap();
+        assert_ne!(k1, k2, "쿨다운 중인 키 대신 다른 키가 할당되어야 함");
+        pool.release(0, k2);
     }
 }

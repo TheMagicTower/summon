@@ -18,6 +18,42 @@ fn is_auth_header(name: &str) -> bool {
     name.eq_ignore_ascii_case("x-api-key") || name.eq_ignore_ascii_case("authorization")
 }
 
+/// 요청 본문에서 세션 식별자 해시 추출
+///
+/// system 프롬프트의 앞부분을 해시하여 동일 세션/프로젝트의 요청이
+/// 동일한 API 키를 사용하도록 한다. Claude Code 세션마다 고유한
+/// 프로젝트 경로, CLAUDE.md 등이 system 프롬프트에 포함되므로
+/// 세션 구분이 가능하다.
+fn session_hash(body: &[u8]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    use std::collections::hash_map::DefaultHasher;
+
+    let prefix = serde_json::from_slice::<serde_json::Value>(body)
+        .ok()
+        .and_then(|v| {
+            match &v["system"] {
+                serde_json::Value::String(s) => {
+                    let end = s.len().min(512);
+                    Some(s[..end].to_string())
+                }
+                serde_json::Value::Array(arr) => {
+                    arr.first()
+                        .and_then(|item| item["text"].as_str())
+                        .map(|s| {
+                            let end = s.len().min(512);
+                            s[..end].to_string()
+                        })
+                }
+                _ => None,
+            }
+        })
+        .unwrap_or_default();
+
+    let mut hasher = DefaultHasher::new();
+    prefix.hash(&mut hasher);
+    hasher.finish()
+}
+
 /// 응답에서 Retry-After 헤더 값을 초 단위로 파싱
 /// - 숫자: 그대로 초 단위 반환
 /// - 파싱 실패 또는 헤더 없음: None (호출자가 기본값 사용)
@@ -101,11 +137,13 @@ pub async fn proxy_handler(
     // 키 풀이 있는 라우트: 429 시 다른 키로 재시도하는 루프
     if route.upstream.auth.has_pool() {
         let mut tried_keys: Vec<usize> = Vec::new();
+        let sess_hash = session_hash(&bytes);
 
         loop {
-            // 이미 시도한 키를 제외하고 다음 키 획득
+            // 첫 시도: 세션 친화로 동일 키 재사용 (프롬프트 캐시 활용)
+            // 재시도: 이미 시도한 키를 제외하고 LC로 할당
             let key_idx = if tried_keys.is_empty() {
-                state.key_pool.acquire(route_idx)
+                state.key_pool.acquire_sticky(route_idx, sess_hash)
             } else {
                 state.key_pool.acquire_excluding(route_idx, &tried_keys)
             };
@@ -271,9 +309,10 @@ async fn forward(
         .method(parts.method.clone())
         .uri(&uri_string);
 
-    // 헤더 복사 (host 제외, 라우팅 시 기존 인증 헤더도 제외)
+    // 헤더 복사 (host, content-length 제외, 라우팅 시 기존 인증 헤더도 제외)
+    // content-length는 hyper가 실제 body 크기로 자동 설정 (폴백 시 body 변경 대응)
     for (key, value) in parts.headers.iter() {
-        if key == hyper::header::HOST {
+        if key == hyper::header::HOST || key == hyper::header::CONTENT_LENGTH {
             continue;
         }
         if route.is_some() && is_auth_header(key.as_str()) {
