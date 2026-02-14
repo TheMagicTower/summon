@@ -6,7 +6,8 @@
     "usage": "Verwendung",
     "providers": "Anbieter",
     "service": "Dienstregistrierung",
-    "troubleshooting": "Fehlerbehebung"
+    "troubleshooting": "Fehlerbehebung",
+    "changelog": "Änderungen"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "Transparenter Proxy",
         "desc": "Claude Code kann die Anwesenheit des Proxys nicht erkennen. Alle Nicht-Nachrichtenanfragen passieren unverändert."
+      },
+      "keyPool": {
+        "title": "API-Schlüssel-Pool",
+        "desc": "Lastverteilung über mehrere API-Schlüssel mit Least-Connections und Concurrent-Begrenzung pro Schlüssel."
+      },
+      "fallback": {
+        "title": "Automatischer Fallback",
+        "desc": "Fällt automatisch zur Anthropic API zurück, wenn externe Anbieter ausfallen, und gewährleistet Dienstkontinuität."
+      },
+      "cooldown": {
+        "title": "429-Cooldown",
+        "desc": "Wendet automatisch Cooldown auf API-Schlüssel an, die 429-Fehler erhalten, und respektiert Retry-After-Header."
+      },
+      "selfUpdate": {
+        "title": "Selbst-Update",
+        "desc": "Aktualisieren Sie mit einem einzigen Befehl auf die neueste Version: summon update."
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "Konfiguration",
     "description": "Konfigurieren Sie Summon mit einer YAML-Konfigurationsdatei.",
+    "toc": "Auf dieser Seite",
     "multiUser": {
       "title": "Mehrbenutzer-Umgebung",
       "perUser": "Damit jeder Benutzer eine eigene Konfiguration hat:",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "Anbieterprobleme",
       "description": "Wenn ein Anbieter Fehler zurückgibt, testen Sie die direkte Verbindung, um festzustellen, ob es ein Summon- oder Anbieterproblem ist."
+    }
+  },
+  "changelog": {
+    "title": "Änderungsprotokoll",
+    "description": "Versionshistorie und Funktionsupdates.",
+    "versions": {
+      "v0_2_8": "Hinzugefügt\n• API-Schlüssel-Cooldown bei 429-Antwort\n• Retry-After-Header-Parsing für Cooldown-Dauer\n• Standard-60-Sekunden-Cooldown ohne Header\n• Automatisches Überspringen von Cooldown-Schlüsseln bei acquire\n• WARN-Level-Logging für Cooldown-Ereignisse",
+      "v0_2_7": "Hinzugefügt\n• Unterstützung zur Angabe des Modellnamens bei Fallback\n\nKorrigiert\n• Kleinere Fehlerbehebungen und Stabilitätsverbesserungen",
+      "v0_2_6": "Hinzugefügt\n• Interaktives CLI-Menü (summon configure)\n• Selbst-Update-Befehl (summon update)\n• Mehrsprachige README-Unterstützung",
+      "v0_2_0": "Hinzugefügt\n• API-Schlüssel-Pool + Least-Connections-Verteilung\n• Gleichzeitige Anfragebegrenzung pro Schlüssel\n• Fallback zur Anthropic-API bei Anbieterausfall\n• Request/Response-Transformer für Nicht-Anthropic-Anbieter\n• Modellnamen-Mapping (model_map-Feld)",
+      "v0_1_0": "Erstveröffentlichung\n• Modellbasiertes Routing mit Teilstring-Übereinstimmung\n• Anthropic-API-Passthrough für nicht geroutete Anfragen\n• SSE-Streaming-Unterstützung\n• YAML-Konfiguration mit Umgebungsvariablen-Ersetzung\n• GitHub Actions CI/CD für Multi-Platform-Releases"
     }
   }
 }

@@ -13,6 +13,7 @@ import {
   Moon,
   Sun,
   Github,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const navItems = [
   { path: "/providers", icon: Puzzle, labelKey: "nav.providers" },
   { path: "/service", icon: Server, labelKey: "nav.service" },
   { path: "/troubleshooting", icon: HelpCircle, labelKey: "nav.troubleshooting" },
+  { path: "/changelog", icon: FileText, labelKey: "nav.changelog" },
 ];
 
 function ThemeToggle() {
@@ -101,7 +103,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-xl">🔮</span>
             <span className="font-bold">Summon</span>
             <span className="ml-auto rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              v0.1
+              v0.2.8
             </span>
           </div>
           <ScrollArea className="flex-1 py-4">

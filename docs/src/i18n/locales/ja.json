@@ -6,7 +6,8 @@
     "usage": "使い方",
     "providers": "プロバイダー",
     "service": "サービス登録",
-    "troubleshooting": "トラブルシューティング"
+    "troubleshooting": "トラブルシューティング",
+    "changelog": "変更履歴"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "透過プロキシ",
         "desc": "Claude Codeはプロキシの存在を検出できません。非メッセージリクエストは変更なしで通過します。"
+      },
+      "keyPool": {
+        "title": "APIキープール",
+        "desc": "Least-Connections方式で複数のAPIキーに負荷分散し、キーごとの同時リクエスト制限を設定します。"
+      },
+      "fallback": {
+        "title": "自動フォールバック",
+        "desc": "外部プロバイダー障害時にAnthropic APIに自動フォールバックし、サービス継続性を確保します。"
+      },
+      "cooldown": {
+        "title": "429クールダウン",
+        "desc": "429エラーを受け取ったAPIキーに自動的にクールダウンを適用し、Retry-Afterヘッダーを尊重します。"
+      },
+      "selfUpdate": {
+        "title": "自己更新",
+        "desc": "summon updateコマンド一つで最新バージョンに更新します。"
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "設定",
     "description": "YAML設定ファイルでSummonを設定します。",
+    "toc": "このページの内容",
     "multiUser": {
       "title": "マルチユーザー環境",
       "perUser": "各ユーザーが独自の設定を使用するには:",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "プロバイダーの問題",
       "description": "プロバイダーがエラーを返す場合、Summonの問題かプロバイダーの問題かを切り分けるために、直接接続をテストしてください。"
+    }
+  },
+  "changelog": {
+    "title": "変更履歴",
+    "description": "リリース履歴と機能アップデート。",
+    "versions": {
+      "v0_2_8": "追加\n• 429（TOO_MANY_REQUESTS）レスポンス時のAPIキークールダウン\n• Retry-Afterヘッダーのパースでクールダウン時間を決定\n• ヘッダーがない場合のデフォルト60秒クールダウン\n• acquire時のクールダウンキー自動スキップ\n• クールダウンイベントのWARNレベルロギング",
+      "v0_2_7": "追加\n• フォールバック時のモデル名指定対応\n\n修正\n• 軽微なバグ修正と安定性向上",
+      "v0_2_6": "追加\n• 対話型CLIメニュー（summon configure）\n• 自己更新コマンド（summon update）\n• 多言語README対応",
+      "v0_2_0": "追加\n• APIキープール + Least-Connections分散\n• キーごとの同時リクエスト制限\n• プロバイダー障害時のAnthropic APIフォールバック\n• 非Anthropicプロバイダー用リクエスト/レスポンストランスフォーマー\n• モデル名マッピング（model_mapフィールド）",
+      "v0_1_0": "初期リリース\n• 部分文字列マッチングベースのモデルルーティング\n• 非ルーティングリクエストのAnthropic APIパススルー\n• SSEストリーミング対応\n• 環境変数置換付きYAML設定\n• マルチプラットフォームリリース用GitHub Actions CI/CD"
     }
   }
 }

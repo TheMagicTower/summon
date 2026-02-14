@@ -7,6 +7,7 @@ import { Usage } from "@/pages/Usage";
 import { Providers } from "@/pages/Providers";
 import { Service } from "@/pages/Service";
 import { Troubleshooting } from "@/pages/Troubleshooting";
+import { Changelog } from "@/pages/Changelog";
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
           <Route path="/providers" element={<Providers />} />
           <Route path="/service" element={<Service />} />
           <Route path="/troubleshooting" element={<Troubleshooting />} />
+          <Route path="/changelog" element={<Changelog />} />
         </Routes>
       </Layout>
     </HashRouter>

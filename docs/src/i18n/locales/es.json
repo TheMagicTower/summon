@@ -6,7 +6,8 @@
     "usage": "Uso",
     "providers": "Proveedores",
     "service": "Registro de servicio",
-    "troubleshooting": "Solución de problemas"
+    "troubleshooting": "Solución de problemas",
+    "changelog": "Cambios"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "Proxy transparente",
         "desc": "Claude Code no puede detectar la presencia del proxy. Todas las solicitudes que no son mensajes pasan sin cambios."
+      },
+      "keyPool": {
+        "title": "Pool de claves API",
+        "desc": "Distribución de carga entre múltiples claves API con Least-Connections y límites de concurrencia por clave."
+      },
+      "fallback": {
+        "title": "Fallback automático",
+        "desc": "Falla automáticamente a la API de Anthropic cuando los proveedores externos fallan, asegurando continuidad del servicio."
+      },
+      "cooldown": {
+        "title": "Cooldown 429",
+        "desc": "Aplica automáticamente cooldown a claves API que reciben errores 429, respetando cabeceras Retry-After."
+      },
+      "selfUpdate": {
+        "title": "Auto-actualización",
+        "desc": "Actualiza a la última versión con un solo comando: summon update."
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "Configuración",
     "description": "Configure Summon con un archivo de configuración YAML.",
+    "toc": "En esta página",
     "multiUser": {
       "title": "Entorno multiusuario",
       "perUser": "Para que cada usuario tenga su propia configuración:",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "Problemas del proveedor",
       "description": "Si un proveedor devuelve errores, pruebe la conexión directa para aislar si es un problema de Summon o del proveedor."
+    }
+  },
+  "changelog": {
+    "title": "Registro de cambios",
+    "description": "Historial de versiones y actualizaciones.",
+    "versions": {
+      "v0_2_8": "Añadido\n• Enfriamiento de clave API al recibir respuesta 429\n• Análisis de cabecera Retry-After para duración de enfriamiento\n• Enfriamiento predeterminado de 60 segundos si no hay cabecera\n• Omisión automática de claves en enfriamiento durante acquire\n• Registro de eventos de enfriamiento a nivel WARN",
+      "v0_2_7": "Añadido\n• Soporte para especificar nombre de modelo en fallback\n\nCorregido\n• Correcciones menores y mejoras de estabilidad",
+      "v0_2_6": "Añadido\n• Menú CLI interactivo (summon configure)\n• Comando de auto-actualización (summon update)\n• Soporte README multilingüe",
+      "v0_2_0": "Añadido\n• Pool de claves API + distribución Least-Connections\n• Límite de solicitudes concurrentes por clave\n• Fallback a API de Anthropic en fallo del proveedor\n• Transformadores de solicitud/respuesta para proveedores no-Anthropic\n• Mapeo de nombres de modelo (campo model_map)",
+      "v0_1_0": "Versión inicial\n• Enrutamiento de modelo basado en coincidencia de subcadena\n• Passthrough de API de Anthropic para solicitudes no enrutadas\n• Soporte de streaming SSE\n• Configuración YAML con sustitución de variables de entorno\n• CI/CD de GitHub Actions para releases multiplataforma"
     }
   }
 }

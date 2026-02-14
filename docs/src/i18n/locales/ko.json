@@ -6,7 +6,8 @@
     "usage": "사용법",
     "providers": "프로바이더",
     "service": "서비스 등록",
-    "troubleshooting": "문제 해결"
+    "troubleshooting": "문제 해결",
+    "changelog": "변경사항"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "투명한 프록시",
         "desc": "Claude Code는 프록시의 존재를 인식할 수 없습니다. 비메시지 요청은 변경 없이 통과합니다."
+      },
+      "keyPool": {
+        "title": "API 키 풀",
+        "desc": "Least-Connections 방식으로 여러 API 키에 부하 분산하고 키당 동시 요청 제한을 설정합니다."
+      },
+      "fallback": {
+        "title": "자동 폴백",
+        "desc": "외부 제공자 실패 시 Anthropic API로 자동 폴백하여 서비스 연속성을 보장합니다."
+      },
+      "cooldown": {
+        "title": "429 쿨다운",
+        "desc": "429 오류를 받은 API 키에 자동으로 쿨다운을 적용하고 Retry-After 헤더를 준수합니다."
+      },
+      "selfUpdate": {
+        "title": "자체 업데이트",
+        "desc": "summon update 한 번의 명령으로 최신 버전으로 업데이트합니다."
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "설정",
     "description": "YAML 설정 파일로 Summon을 설정합니다.",
+    "toc": "이 페이지의 내용",
     "multiUser": {
       "title": "다중 사용자 환경",
       "perUser": "각 사용자가 자신만의 설정을 사용하려면:",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "프로바이더 문제",
       "description": "프로바이더가 오류를 반환하면, Summon 문제인지 프로바이더 문제인지 분리하기 위해 직접 연결을 테스트하세요."
+    }
+  },
+  "changelog": {
+    "title": "변경사항",
+    "description": "릴리즈 이력과 기능 업데이트.",
+    "versions": {
+      "v0_2_8": "추가\n• 429(TOO_MANY_REQUESTS) 응답 시 API 키 쿨다운 적용\n• Retry-After 헤더 파싱으로 쿨다운 시간 결정\n• 헤더 없을 시 기본 60초 쿨다운 적용\n• acquire 시 쿨다운 키 자동 건너뜀\n• 쿨다운 이벤트 WARN 레벨 로깅",
+      "v0_2_7": "추가\n• 폴백 시 모델명 지정 지원\n\n수정\n• 사소한 버그 수정 및 안정성 개선",
+      "v0_2_6": "추가\n• 대화형 CLI 메뉴 (summon configure)\n• 자체 업데이트 명령 (summon update)\n• 다국어 README 지원",
+      "v0_2_0": "추가\n• API 키 풀 + Least-Connections 분배\n• 키당 동시 요청 제한\n• 제공자 실패 시 Anthropic API 폴백\n• 비-Anthropic 제공자용 요청/응답 트랜스포머\n• 모델명 매핑 (model_map 필드)",
+      "v0_1_0": "초기 릴리즈\n• 부분 문자열 매칭 기반 모델 라우팅\n• 비라우팅 요청에 대한 Anthropic API 패스스루\n• SSE 스트리밍 지원\n• 환경변수 치환 포함 YAML 설정\n• 멀티 플랫폼 릴리즈용 GitHub Actions CI/CD"
     }
   }
 }

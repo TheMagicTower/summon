@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { ArrowRight, Zap, Shield, Router, RefreshCw } from "lucide-react";
+import { ArrowRight, Zap, Shield, Router, RefreshCw, Key, RotateCcw, Timer, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeBlock } from "@/components/CodeBlock";
 
@@ -12,6 +12,10 @@ export function Home() {
     { icon: Shield, titleKey: "home.feature.auth.title", descKey: "home.feature.auth.desc" },
     { icon: Zap, titleKey: "home.feature.streaming.title", descKey: "home.feature.streaming.desc" },
     { icon: RefreshCw, titleKey: "home.feature.transparent.title", descKey: "home.feature.transparent.desc" },
+    { icon: Key, titleKey: "home.feature.keyPool.title", descKey: "home.feature.keyPool.desc" },
+    { icon: RotateCcw, titleKey: "home.feature.fallback.title", descKey: "home.feature.fallback.desc" },
+    { icon: Timer, titleKey: "home.feature.cooldown.title", descKey: "home.feature.cooldown.desc" },
+    { icon: Download, titleKey: "home.feature.selfUpdate.title", descKey: "home.feature.selfUpdate.desc" },
   ];
 
   return (

@@ -6,7 +6,8 @@
     "usage": "使用方法",
     "providers": "提供商",
     "service": "服务注册",
-    "troubleshooting": "故障排除"
+    "troubleshooting": "故障排除",
+    "changelog": "更新日志"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "透明代理",
         "desc": "Claude Code 无法检测到代理的存在。所有非消息请求不做任何更改直接通过。"
+      },
+      "keyPool": {
+        "title": "API密钥池",
+        "desc": "使用Least-Connections方式在多个API密钥间进行负载均衡，并设置每个密钥的并发限制。"
+      },
+      "fallback": {
+        "title": "自动回退",
+        "desc": "外部提供商失败时自动回退到Anthropic API，确保服务连续性。"
+      },
+      "cooldown": {
+        "title": "429冷却",
+        "desc": "对收到429错误的API密钥自动应用冷却，并遵守Retry-After标头。"
+      },
+      "selfUpdate": {
+        "title": "自更新",
+        "desc": "使用summon update一条命令即可更新到最新版本。"
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "配置",
     "description": "使用 YAML 配置文件配置 Summon。",
+    "toc": "本页目录",
     "multiUser": {
       "title": "多用户环境",
       "perUser": "各用户使用独立配置：",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "提供商问题",
       "description": "如果提供商返回错误，请直接测试连接以确定是 Summon 问题还是提供商问题。"
+    }
+  },
+  "changelog": {
+    "title": "更新日志",
+    "description": "发布历史和功能更新。",
+    "versions": {
+      "v0_2_8": "新增\n• 429（TOO_MANY_REQUESTS）响应时的API密钥冷却\n• 解析Retry-After标头确定冷却时间\n• 无标头时默认60秒冷却\n• acquire时自动跳过冷却密钥\n• 冷却事件的WARN级别日志记录",
+      "v0_2_7": "新增\n• 回退时支持指定模型名称\n\n修复\n• 小错误修复和稳定性改进",
+      "v0_2_6": "新增\n• 交互式CLI菜单（summon configure）\n• 自更新命令（summon update）\n• 多语言README支持",
+      "v0_2_0": "新增\n• API密钥池 + Least-Connections分配\n• 每密钥并发请求限制\n• 提供商失败时回退到Anthropic API\n• 非Anthropic提供商的请求/响应转换器\n• 模型名称映射（model_map字段）",
+      "v0_1_0": "初始版本\n• 基于子字符串匹配的模型路由\n• 非路由请求的Anthropic API透传\n• SSE流式传输支持\n• 带环境变量替换的YAML配置\n• 多平台发布的GitHub Actions CI/CD"
     }
   }
 }

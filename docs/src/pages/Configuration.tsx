@@ -1,14 +1,31 @@
 import { useTranslation } from "react-i18next";
 import { CodeBlock } from "@/components/CodeBlock";
+import { TableOfContents } from "@/components/TableOfContents";
 
 export function Configuration() {
   const { t } = useTranslation();
+
+  const tocItems = [
+    { id: "location", label: t("configuration.location.title") },
+    { id: "multi-user", label: t("configuration.multiUser.title") },
+    { id: "approach1", label: t("configuration.approach1.title") },
+    { id: "approach2", label: t("configuration.approach2.title") },
+    { id: "fields", label: t("configuration.fields.title") },
+    { id: "key-pool", label: t("configuration.keyPool.title") },
+    { id: "env", label: t("configuration.env.title") },
+  ];
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">{t("configuration.title")}</h1>
         <p className="mt-2 text-muted-foreground">{t("configuration.description")}</p>
+      </div>
+
+      {/* Table of Contents */}
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <h3 className="mb-2 text-sm font-medium">{t("configuration.toc")}</h3>
+        <TableOfContents items={tocItems} />
       </div>
 
       {/* Config File Location */}

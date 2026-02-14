@@ -6,7 +6,8 @@
     "usage": "Usage",
     "providers": "Providers",
     "service": "Service Registration",
-    "troubleshooting": "Troubleshooting"
+    "troubleshooting": "Troubleshooting",
+    "changelog": "Changelog"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "Transparent Proxy",
         "desc": "Claude Code cannot detect the proxy's presence. All non-message requests pass through unchanged."
+      },
+      "keyPool": {
+        "title": "API Key Pool",
+        "desc": "Load balance across multiple API keys with Least-Connections distribution and per-key concurrency limits."
+      },
+      "fallback": {
+        "title": "Automatic Fallback",
+        "desc": "Falls back to Anthropic API when external providers fail, ensuring continuous service."
+      },
+      "cooldown": {
+        "title": "429 Cooldown",
+        "desc": "Automatically applies cooldown to API keys that receive 429 errors, respecting Retry-After headers."
+      },
+      "selfUpdate": {
+        "title": "Self-Update",
+        "desc": "Update to the latest version with a single command: summon update."
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "Configuration",
     "description": "Configure Summon with a YAML config file.",
+    "toc": "On This Page",
     "multiUser": {
       "title": "Multi-user Environment",
       "perUser": "For each user to have their own configuration:",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "Provider Issues",
       "description": "If a provider returns errors, test the connection directly to isolate whether it's a Summon issue or a provider issue."
+    }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Release history and feature updates.",
+    "versions": {
+      "v0_2_8": "Added\n• 429 (TOO_MANY_REQUESTS) response handling with API key cooldown\n• Retry-After header parsing for cooldown duration\n• Default 60-second cooldown when header is absent\n• Automatic skip of cooldown keys during acquire\n• WARN-level logging for cooldown events",
+      "v0_2_7": "Added\n• Fallback model name specification support\n\nFixed\n• Minor bug fixes and stability improvements",
+      "v0_2_6": "Added\n• Interactive CLI menu (summon configure)\n• Self-update command (summon update)\n• Multi-language README support",
+      "v0_2_0": "Added\n• API key pool with Least-Connections distribution\n• Per-key concurrency limits\n• Fallback to Anthropic API on provider failure\n• Request/response transformers for non-Anthropic providers\n• Model name mapping (model_map field)",
+      "v0_1_0": "Initial Release\n• Model-based routing with substring matching\n• Anthropic API passthrough for non-routed requests\n• SSE streaming support\n• YAML configuration with environment variable substitution\n• GitHub Actions CI/CD for multi-platform releases"
     }
   }
 }

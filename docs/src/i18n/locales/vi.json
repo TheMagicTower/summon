@@ -6,7 +6,8 @@
     "usage": "Sử dụng",
     "providers": "Nhà cung cấp",
     "service": "Đăng ký dịch vụ",
-    "troubleshooting": "Xử lý sự cố"
+    "troubleshooting": "Xử lý sự cố",
+    "changelog": "Nhật ký"
   },
   "home": {
     "title": "Summon",
@@ -34,6 +35,22 @@
       "transparent": {
         "title": "Proxy trong suốt",
         "desc": "Claude Code không thể phát hiện sự hiện diện của proxy. Tất cả yêu cầu không phải tin nhắn đều đi qua không thay đổi."
+      },
+      "keyPool": {
+        "title": "Pool khóa API",
+        "desc": "Cân bằng tải trên nhiều khóa API với Least-Connections và giới hạn đồng thời cho mỗi khóa."
+      },
+      "fallback": {
+        "title": "Fallback tự động",
+        "desc": "Tự động fallback sang API Anthropic khi nhà cung cấp bên ngoài gặp lỗi, đảm bảo tính liên tục dịch vụ."
+      },
+      "cooldown": {
+        "title": "Cooldown 429",
+        "desc": "Tự động áp dụng cooldown cho khóa API nhận lỗi 429, tôn trọng header Retry-After."
+      },
+      "selfUpdate": {
+        "title": "Tự cập nhật",
+        "desc": "Cập nhật lên phiên bản mới nhất với một lệnh: summon update."
       }
     }
   },
@@ -59,6 +76,7 @@
   "configuration": {
     "title": "Cấu hình",
     "description": "Cấu hình Summon bằng tệp YAML.",
+    "toc": "Trên trang này",
     "multiUser": {
       "title": "Môi trường nhiều người dùng",
       "perUser": "Để mỗi người dùng có cấu hình riêng:",
@@ -270,6 +288,17 @@
     "provider": {
       "title": "Vấn đề nhà cung cấp",
       "description": "Nếu nhà cung cấp trả về lỗi, hãy kiểm tra kết nối trực tiếp để xác định đó là vấn đề của Summon hay nhà cung cấp."
+    }
+  },
+  "changelog": {
+    "title": "Nhật ký thay đổi",
+    "description": "Lịch sử phiên bản và cập nhật tính năng.",
+    "versions": {
+      "v0_2_8": "Đã thêm\n• Cooldown khóa API khi nhận phản hồi 429\n• Phân tích header Retry-After cho thời gian cooldown\n• Cooldown mặc định 60 giây khi không có header\n• Tự động bỏ qua khóa cooldown khi acquire\n• Ghi log mức WARN cho sự kiện cooldown",
+      "v0_2_7": "Đã thêm\n• Hỗ trợ chỉ định tên mô hình khi fallback\n\nĐã sửa\n• Sửa lỗi nhỏ và cải thiện độ ổn định",
+      "v0_2_6": "Đã thêm\n• Menu CLI tương tác (summon configure)\n• Lệnh tự cập nhật (summon update)\n• Hỗ trợ README đa ngôn ngữ",
+      "v0_2_0": "Đã thêm\n• Pool khóa API + phân phối Least-Connections\n• Giới hạn yêu cầu đồng thời cho mỗi khóa\n• Fallback sang API Anthropic khi nhà cung cấp lỗi\n• Transformer yêu cầu/phản hồi cho nhà cung cấp không-Anthropic\n• Ánh xạ tên mô hình (trường model_map)",
+      "v0_1_0": "Phát hành ban đầu\n• Định tuyến mô hình dựa trên khớp chuỗi con\n• Passthrough API Anthropic cho yêu cầu không được định tuyến\n• Hỗ trợ streaming SSE\n• Cấu hình YAML với thay thế biến môi trường\n• GitHub Actions CI/CD cho phát hành đa nền tảng"
     }
   }
 }
