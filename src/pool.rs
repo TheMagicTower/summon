@@ -149,7 +149,7 @@ mod tests {
                     },
                     transformer: None,
                     model_map: None,
-                    fallback: true,
+                    fallback: Fallback::Passthrough,
                     concurrency: Some(1),
                 },
                 // 라우트 1: 풀 없음
@@ -170,7 +170,7 @@ mod tests {
                     },
                     transformer: None,
                     model_map: None,
-                    fallback: true,
+                    fallback: Fallback::Passthrough,
                     concurrency: None,
                 },
             ],

@@ -1,4 +1,4 @@
-use crate::config::{AuthConfig, Config, RouteConfig, UpstreamConfig};
+use crate::config::{AuthConfig, Config, Fallback, RouteConfig, UpstreamConfig};
 use dialoguer::{Confirm, Input, Select};
 use serde_json::Value;
 use std::fs;
@@ -435,6 +435,32 @@ fn add_route(config_path: &str) {
 
     let auth_value = auth_value_format.replace("{}", &api_key);
 
+    // 폴백 설정
+    let fallback_options = &[
+        "모델명 지정 (외부 제공자 실패 시 지정 모델로 Anthropic 폴백)",
+        "원본 모델명 그대로 폴백 (Anthropic 호환 모델일 때만 유효)",
+        "폴백 없음 (외부 제공자 실패 시 에러 반환)",
+    ];
+    let fallback_sel = Select::new()
+        .with_prompt("폴백 설정")
+        .items(fallback_options)
+        .default(0)
+        .interact()
+        .expect("선택 실패");
+
+    let fallback = match fallback_sel {
+        0 => {
+            let model: String = Input::new()
+                .with_prompt("폴백 모델명")
+                .default("claude-sonnet-4-5-20250929".into())
+                .interact_text()
+                .expect("입력 실패");
+            Fallback::Model(model)
+        }
+        1 => Fallback::Passthrough,
+        _ => Fallback::Disabled,
+    };
+
     let route = RouteConfig {
         match_pattern: match_pattern.clone(),
         upstream: UpstreamConfig {
@@ -452,7 +478,7 @@ fn add_route(config_path: &str) {
         },
         transformer: None,
         model_map: None,
-        fallback: true,
+        fallback,
         concurrency: None,
     };
 

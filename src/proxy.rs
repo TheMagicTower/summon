@@ -36,6 +36,23 @@ fn is_stream_request(bytes: &[u8]) -> bool {
         .unwrap_or(false)
 }
 
+/// JSON 본문의 model 필드를 교체
+fn replace_model(bytes: &Bytes, new_model: &str) -> Result<Bytes, StatusCode> {
+    let mut json: serde_json::Value =
+        serde_json::from_slice(bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    json["model"] = serde_json::Value::String(new_model.to_string());
+    let replaced = serde_json::to_vec(&json).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Bytes::from(replaced))
+}
+
+/// 폴백 시 모델명 교체 적용
+fn apply_fallback_model(bytes: &Bytes, fallback: &crate::config::Fallback) -> Result<Bytes, StatusCode> {
+    match fallback.model() {
+        Some(model) => replace_model(bytes, model),
+        None => Ok(bytes.clone()),
+    }
+}
+
 /// 모든 요청을 처리하는 프록시 핸들러
 /// - POST /v1/messages → 모델 기반 라우팅 (+ 트랜스포머 변환)
 /// - 그 외 → Anthropic API 패스스루
@@ -78,9 +95,10 @@ pub async fn proxy_handler(
                             model = %model,
                             "모든 API 키가 동시 요청 제한에 도달"
                         );
-                        if route.fallback {
+                        if route.fallback.is_enabled() {
                             tracing::info!("Anthropic API로 폴백");
-                            return forward(&state, &parts, bytes, None, None).await;
+                            let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                            return forward(&state, &parts, fallback_bytes, None, None).await;
                         } else {
                             return Err(StatusCode::TOO_MANY_REQUESTS);
                         }
@@ -96,7 +114,7 @@ pub async fn proxy_handler(
     let auth_override = auth_value.as_deref();
 
     match route {
-        Some(route) if route.fallback => {
+        Some(route) if route.fallback.is_enabled() => {
             // 폴백 활성화: 외부 제공자 실패 시 Anthropic API로 재시도
             match forward(&state, &parts, bytes.clone(), Some(route), auth_override).await {
                 Ok(resp) if resp.status().is_success() => {
@@ -108,12 +126,14 @@ pub async fn proxy_handler(
                         "외부 제공자 비성공 응답, Anthropic API로 폴백"
                     );
                     drop(pool_guard);
-                    forward(&state, &parts, bytes, None, None).await
+                    let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                    forward(&state, &parts, fallback_bytes, None, None).await
                 }
                 Err(_) => {
                     tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
                     drop(pool_guard);
-                    forward(&state, &parts, bytes, None, None).await
+                    let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                    forward(&state, &parts, fallback_bytes, None, None).await
                 }
             }
         }

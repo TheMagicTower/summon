@@ -53,12 +53,66 @@ fn is_default_auth_type(s: &String) -> bool {
     s == "api_key"
 }
 
-fn default_true() -> bool {
-    true
+/// 외부 제공자 실패 시 폴백 설정
+/// - false: 폴백 없음
+/// - true: 원본 모델명 그대로 Anthropic API로 폴백
+/// - "모델명": 지정된 모델명으로 교체 후 Anthropic API로 폴백
+#[derive(Debug, Clone)]
+pub enum Fallback {
+    /// 폴백 비활성화
+    Disabled,
+    /// 원본 모델명 그대로 폴백
+    Passthrough,
+    /// 지정된 모델명으로 교체 후 폴백
+    Model(String),
 }
 
-fn is_true(v: &bool) -> bool {
-    *v
+impl Default for Fallback {
+    fn default() -> Self {
+        Fallback::Passthrough
+    }
+}
+
+impl Fallback {
+    /// 폴백이 활성화되어 있는지 확인
+    pub fn is_enabled(&self) -> bool {
+        !matches!(self, Fallback::Disabled)
+    }
+
+    /// 폴백 시 교체할 모델명 (None이면 원본 유지)
+    pub fn model(&self) -> Option<&str> {
+        match self {
+            Fallback::Model(m) => Some(m.as_str()),
+            _ => None,
+        }
+    }
+}
+
+impl Serialize for Fallback {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Fallback::Disabled => serializer.serialize_bool(false),
+            Fallback::Passthrough => serializer.serialize_bool(true),
+            Fallback::Model(m) => serializer.serialize_str(m),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Fallback {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_yaml::Value::deserialize(deserializer)?;
+        match value {
+            serde_yaml::Value::Bool(true) => Ok(Fallback::Passthrough),
+            serde_yaml::Value::Bool(false) => Ok(Fallback::Disabled),
+            serde_yaml::Value::String(s) if s.is_empty() => Ok(Fallback::Disabled),
+            serde_yaml::Value::String(s) => Ok(Fallback::Model(s)),
+            _ => Err(serde::de::Error::custom("fallback은 bool 또는 모델명 문자열이어야 합니다")),
+        }
+    }
+}
+
+fn is_default_fallback(f: &Fallback) -> bool {
+    matches!(f, Fallback::Passthrough)
 }
 
 impl AuthConfig {
@@ -106,9 +160,12 @@ pub struct RouteConfig {
     /// 업스트림 모델명 (원본 모델명을 이 값으로 교체)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model_map: Option<String>,
-    /// 외부 제공자 실패 시 Anthropic API로 폴백 (기본값: true)
-    #[serde(default = "default_true", skip_serializing_if = "is_true")]
-    pub fallback: bool,
+    /// 외부 제공자 실패 시 Anthropic API로 폴백
+    /// - false: 폴백 없음
+    /// - true: 원본 모델명 그대로 폴백 (기본값)
+    /// - "모델명": 지정된 모델명으로 교체 후 폴백
+    #[serde(default, skip_serializing_if = "is_default_fallback")]
+    pub fallback: Fallback,
     /// API 키당 동시 요청 제한 (기본값: 제한 없음)
     /// 예: GLM-5는 키당 1개, GLM-4-Plus는 키당 20개
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -411,7 +468,7 @@ routes:
                     },
                     transformer: None,
                     model_map: None,
-                    fallback: true,
+                    fallback: Fallback::Passthrough,
                     concurrency: None,
                 },
                 RouteConfig {
@@ -431,7 +488,7 @@ routes:
                     },
                     transformer: None,
                     model_map: None,
-                    fallback: true,
+                    fallback: Fallback::Passthrough,
                     concurrency: None,
                 },
             ],
@@ -468,7 +525,7 @@ routes:
                 },
                 transformer: None,
                 model_map: None,
-                fallback: true,
+                fallback: Fallback::Passthrough,
                 concurrency: None,
             }],
         }
