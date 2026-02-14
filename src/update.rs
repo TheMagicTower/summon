@@ -58,10 +58,9 @@ fn build_download_url(tag: &str) -> Result<String, String> {
         _ => return Err(format!("지원하지 않는 아키텍처: {}", std::env::consts::ARCH)),
     };
 
-    let version = tag.strip_prefix('v').unwrap_or(tag);
     Ok(format!(
-        "https://github.com/TheMagicTower/summon/releases/download/{}/summon-{}-{}-{}.tar.gz",
-        tag, version, os, arch
+        "https://github.com/TheMagicTower/summon/releases/download/{}/summon-{}-{}.tar.gz",
+        tag, os, arch
     ))
 }
 
