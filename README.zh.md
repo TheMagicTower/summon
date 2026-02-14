@@ -185,7 +185,10 @@ routes:
 - `${ENV_VAR}`: 环境变量引用（API密钥不直接写入配置文件）
 - `upstream.auth.pool`: 用于负载均衡的额外API密钥值（使用与`auth.header`相同的头部）
 - `concurrency`: 每个密钥的并发请求限制（超过时回退到Anthropic或返回429）
-- `fallback`: 提供商失败时是否回退到Anthropic API（默认：`true`）
+- `fallback`: 提供商失败时的回退行为（默认：`true`）
+  - `false`: 不回退，原样返回错误
+  - `true`: 使用原始模型名回退到Anthropic API
+  - `"模型名"`: 使用指定的模型名替换后回退到Anthropic API（非Anthropic模型名推荐使用）
 - 不匹配的模型透传到`default.url`（Anthropic API）
 
 ### API 密钥池（并发限制处理）
@@ -212,7 +215,7 @@ routes:
 
 - 请求被分发到活动连接最少的密钥（**Least-Connections**）
 - 每个密钥的并发使用量由`concurrency`设置跟踪和限制
-- 当所有密钥都达到限制时：回退到Anthropic（如果`fallback: true`）或返回HTTP 429
+- 当所有密钥都达到限制时：回退到Anthropic（如果启用了`fallback`）或返回HTTP 429。使用`fallback: "claude-sonnet-4-5-20250929"`可以安全地以兼容模型名回退
 - 流式响应在流结束时自动释放密钥
 
 ## 运行
@@ -528,6 +531,7 @@ journalctl -u summon -f
 - **SSE流式传输**：按块实时透传
 - **并发订阅身份验证**：Anthropic OAuth令牌保持不变，仅外部提供商使用API密钥
 - **API密钥池**：为有每密钥并发限制的提供商提供支持，通过Least-Connections分配实现每个路由多个API密钥
+- **回退模型名**：使用非Anthropic模型名时，指定兼容的Anthropic模型名以实现安全回退
 - **安全性**：仅绑定到`127.0.0.1`，API密钥从环境变量引用
 
 ## ⚠️ 已知限制
@@ -547,8 +551,8 @@ journalctl -u summon -f
 
 ## 路线图
 
-- **v0.1**（当前）：透传 + 基于模型的路由 + SSE流式传输
-- **v0.2**：转换器（请求/响应转换 — 用于不兼容的提供商）
+- **v0.1**：透传 + 基于模型的路由 + SSE流式传输
+- **v0.2**（当前）：转换器、API密钥池、回退模型名、交互式CLI、自我更新
 - **v0.3**：日志记录、健康检查、热重载、超时
 
 ## 许可证

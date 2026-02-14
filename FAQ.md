@@ -43,7 +43,20 @@ Claude Code 클라이언트가 모델명을 Anthropic의 알려진 모델 목록
 
 **해결**
 
-Anthropic과 호환되지 않는 모델명을 사용하는 라우트에서는 `fallback: false`로 설정하세요:
+**방법 1 (권장): 폴백 모델명 지정** — 외부 제공자 실패 시 호환되는 Anthropic 모델명으로 교체하여 안전하게 폴백합니다:
+
+```yaml
+routes:
+  - match: "glm"
+    upstream:
+      url: "https://api.z.ai/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${ZAI_API_KEY}"
+    fallback: "claude-sonnet-4-5-20250929"   # 호환 모델명으로 폴백
+```
+
+**방법 2: 폴백 비활성화** — 외부 제공자 실패 시 에러를 그대로 반환합니다:
 
 ```yaml
 routes:
@@ -197,12 +210,13 @@ cargo build --release
 
 - `pool`에 API 키를 추가하여 처리 용량을 늘린다.
 - `concurrency` 값을 높인다 (제공자의 실제 제한 범위 내에서).
-- `fallback: true`로 설정하면 한도 초과 시 Anthropic API로 폴백합니다 (단, Case 2 주의).
+- `fallback: "claude-sonnet-4-5-20250929"`로 설정하면 한도 초과 시 호환 모델명으로 안전하게 Anthropic API로 폴백합니다.
 
 ```yaml
 routes:
   - match: "glm-5"
     concurrency: 1          # 키당 동시 1개
+    fallback: "claude-sonnet-4-5-20250929"  # 안전한 폴백
     upstream:
       url: "https://api.z.ai/api/anthropic"
       auth:
@@ -211,5 +225,4 @@ routes:
         pool:                # 키를 추가하여 총 처리량 증가
           - "${ZAI_KEY_2}"
           - "${ZAI_KEY_3}"
-    fallback: false
 ```

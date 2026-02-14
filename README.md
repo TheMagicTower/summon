@@ -185,7 +185,10 @@ routes:
 - `${ENV_VAR}`: Environment variable reference (API keys are not written directly in the configuration file)
 - `upstream.auth.pool`: Additional API key values for load distribution (same header as `auth.header`)
 - `concurrency`: Per-key concurrent request limit (when exceeded, falls back to Anthropic or returns 429)
-- `fallback`: Whether to fall back to Anthropic API on provider failure (default: `true`)
+- `fallback`: Fallback behavior on provider failure (default: `true`)
+  - `false`: No fallback, return error as-is
+  - `true`: Fall back to Anthropic API with original model name
+  - `"model-name"`: Fall back to Anthropic API with the specified model name (recommended for non-Anthropic model names)
 - Models that don't match are passed through to `default.url` (Anthropic API)
 
 ### API Key Pool (Concurrency Limit Handling)
@@ -212,7 +215,7 @@ routes:
 
 - Requests are distributed to the key with the fewest active connections (**Least-Connections**)
 - Each key's concurrent usage is tracked and limited by the `concurrency` setting
-- When all keys reach their limit: fallback to Anthropic (if `fallback: true`) or return HTTP 429
+- When all keys reach their limit: fallback to Anthropic (if `fallback` is enabled) or return HTTP 429. Use `fallback: "claude-sonnet-4-5-20250929"` to safely fall back with a compatible model name
 - Streaming responses automatically release the key when the stream ends
 
 ## Running
@@ -528,6 +531,7 @@ journalctl -u summon -f
 - **SSE Streaming**: Real-time passthrough in chunks
 - **Concurrent Subscription Auth**: Anthropic OAuth tokens remain intact, only external providers use API keys
 - **API Key Pool**: Multiple API keys per route with Least-Connections distribution for providers with per-key concurrency limits
+- **Fallback Model Name**: Specify a compatible Anthropic model name for safe fallback when using non-Anthropic model names
 - **Security**: Binds only to `127.0.0.1`, API keys referenced from environment variables
 
 ## ⚠️ Known Limitations
@@ -547,8 +551,8 @@ This is a system architecture limitation that cannot be resolved:
 
 ## Roadmap
 
-- **v0.1** (current): Passthrough + model-based routing + SSE streaming
-- **v0.2**: Transformer (request/response transformation — for incompatible providers)
+- **v0.1**: Passthrough + model-based routing + SSE streaming
+- **v0.2** (current): Transformer, API key pool, fallback model name, interactive CLI, self-update
 - **v0.3**: Logging, health check, hot reload, timeout
 
 ## License

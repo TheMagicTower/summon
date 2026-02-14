@@ -185,7 +185,10 @@ routes:
 - `${ENV_VAR}`: Referencia a variable de entorno (las claves de API no se escriben directamente en el archivo de configuración)
 - `upstream.auth.pool`: Valores adicionales de claves API para distribución de carga (usa el mismo header que `auth.header`)
 - `concurrency`: Límite de solicitudes concurrentes por clave (cuando se excede, retrocede a Anthropic o devuelve 429)
-- `fallback`: Si retroceder a Anthropic API en caso de fallo del proveedor (predeterminado: `true`)
+- `fallback`: Comportamiento de respaldo en caso de fallo del proveedor (predeterminado: `true`)
+  - `false`: Sin respaldo, devolver el error tal cual
+  - `true`: Respaldo a Anthropic API con el nombre de modelo original
+  - `"nombre-modelo"`: Respaldo a Anthropic API con el nombre de modelo especificado (recomendado para nombres de modelo no-Anthropic)
 - Los modelos que no coinciden se pasan a `default.url` (Anthropic API)
 
 ### Grupo de claves API (Manejo de límites de concurrencia)
@@ -212,7 +215,7 @@ routes:
 
 - Las solicitudes se distribuyen a la clave con menos conexiones activas (**Least-Connections**)
 - El uso concurrente de cada clave se rastrea y limita mediante la configuración `concurrency`
-- Cuando todas las claves alcanzan su límite: retrocede a Anthropic (si `fallback: true`) o devuelve HTTP 429
+- Cuando todas las claves alcanzan su límite: retrocede a Anthropic (si `fallback` está habilitado) o devuelve HTTP 429. Use `fallback: "claude-sonnet-4-5-20250929"` para un respaldo seguro con un nombre de modelo compatible
 - Las respuestas de streaming liberan automáticamente la clave cuando termina el flujo
 
 ## Ejecución
@@ -528,6 +531,7 @@ journalctl -u summon -f
 - **Transmisión SSE**: Passthrough en tiempo real por fragmentos
 - **Autenticación de suscripción concurrente**: Los tokens OAuth de Anthropic permanecen intactos, solo los proveedores externos usan claves de API
 - **Grupo de claves API**: Soporte para múltiples claves API por ruta con distribución Least-Connections para proveedores con límites de concurrencia por clave
+- **Nombre de modelo de respaldo**: Especifique un nombre de modelo Anthropic compatible para un respaldo seguro al usar nombres de modelo no-Anthropic
 - **Seguridad**: Se enlaza solo a `127.0.0.1`, claves de API referenciadas desde variables de entorno
 
 ## ⚠️ Limitaciones conocidas
@@ -547,8 +551,8 @@ Esta es una limitación de la arquitectura del sistema que no se puede resolver:
 
 ## Hoja de ruta
 
-- **v0.1** (actual): Passthrough + enrutamiento basado en modelos + transmisión SSE
-- **v0.2**: Transformador (transformación de solicitud/respuesta — para proveedores incompatibles)
+- **v0.1**: Passthrough + enrutamiento basado en modelos + transmisión SSE
+- **v0.2** (actual): Transformador, grupo de claves API, nombre de modelo de respaldo, CLI interactivo, auto-actualización
 - **v0.3**: Registro, verificación de salud, recarga en caliente, tiempo de espera
 
 ## Licencia

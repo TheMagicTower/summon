@@ -32,7 +32,20 @@
 - **응답 트랜스포머**: 모델명 복원, 필드명 매핑, 누락 필드 기본값 삽입
 - Anthropic 호환 제공자는 트랜스포머 불필요, 비호환 제공자만 설정
 
-### 5. 구독 인증 병행
+### 5. API 키 풀 (v0.2)
+
+- 라우트별로 여러 API 키를 풀로 등록, Least-Connections 방식으로 분배
+- `concurrency` 설정으로 키당 동시 요청 수 제한
+- 모든 키 소진 시 fallback 동작에 따라 Anthropic 폴백 또는 429 반환
+- `PoolGuard`를 통한 스트리밍 응답 자동 해제
+
+### 6. 폴백 모델명 (v0.2)
+
+- `fallback` 필드가 `false` / `true` / `"모델명"` 3가지 형태 지원
+- `"모델명"` 지정 시, 외부 제공자 실패 또는 키 풀 소진 시 해당 모델명으로 교체하여 Anthropic API로 폴백
+- 비-Anthropic 모델명(glm-5 등) 사용 시 Anthropic이 인식 가능한 모델명으로 안전하게 폴백
+
+### 7. 구독 인증 병행
 
 - Anthropic OAuth 토큰을 그대로 Anthropic API로 전달
 - 외부 제공자 요청 시에만 API 키 교체
@@ -85,8 +98,9 @@ summon/
 ├── SPEC.md
 ├── src/
 │   ├── main.rs           # 엔트리포인트, CLI 파싱, 서버 시작
-│   ├── config.rs         # 설정 파일 로드/파싱, 환경변수 치환, 모델 매칭
-│   ├── proxy.rs          # 프록시 핸들러 (패스스루 + 라우팅 + 포워딩)
+│   ├── config.rs         # Config 구조체, YAML 로드, 환경변수 치환, Fallback enum
+│   ├── proxy.rs          # 프록시 핸들러 (패스스루 + 라우팅 + 폴백 모델 교체)
+│   ├── pool.rs           # API 키 풀 (Least-Connections 분배 + PoolGuard)
 │   ├── configure.rs      # 대화형 설정 관리 (enable/disable/add/remove/status 등)
 │   ├── transformer.rs    # 요청/응답 변환 (비호환 제공자 지원)
 │   └── update.rs         # 자체 업데이트 (GitHub 릴리스 확인 + 바이너리 교체)
@@ -115,6 +129,19 @@ routes:
         header: "x-api-key"
         value: "${Z_AI_API_KEY}"  # 환경변수 참조
 
+  - match: "glm-5"
+    concurrency: 1               # 키당 동시 요청 제한
+    fallback: "claude-sonnet-4-5-20250929"  # 폴백 시 호환 모델명으로 교체
+    upstream:
+      url: "https://open.bigmodel.cn/api/paas/v4"
+      auth:
+        header: "Authorization"
+        value: "Bearer ${GLM_KEY_1}"
+        pool:                     # 추가 키 (동일 헤더)
+          - "Bearer ${GLM_KEY_2}"
+    transformer: "openai"
+    model_map: "glm-5"
+
   - match: "claude-sonnet"
     upstream:
       url: "https://api.kimi.ai/v1"
@@ -124,6 +151,7 @@ routes:
 
 # 매칭 순서: 위에서 아래로, 첫 번째 매칭 적용
 # 매칭되지 않으면 default로 전달
+# fallback: false (폴백 비활성화) / true (원본 모델명 폴백) / "모델명" (모델명 교체 폴백)
 ```
 
 ## 핵심 구현 상세
@@ -200,21 +228,23 @@ tracing-subscriber = "0.3"
 
 ## 구현 범위
 
-### v0.1 (MVP) ← 현재 목표
+### v0.1 (MVP) ✅ 완료
 
-- [ ] Cargo.toml 의존성 설정
-- [ ] config.rs: Config 구조체 정의 + YAML 로드 + 환경변수 치환 + find_route
-- [ ] proxy.rs: 프록시 핸들러 + 패스스루 + 업스트림 포워딩 + SSE 스트리밍
-- [ ] main.rs: 서버 시작 + --config CLI 인자 + AppState
-- [ ] 단위 테스트: config 파싱, 환경변수 치환, 모델 매칭
-- [ ] 빌드 및 기본 동작 검증
+- [x] Cargo.toml 의존성 설정
+- [x] config.rs: Config 구조체 정의 + YAML 로드 + 환경변수 치환 + find_route
+- [x] proxy.rs: 프록시 핸들러 + 패스스루 + 업스트림 포워딩 + SSE 스트리밍
+- [x] main.rs: 서버 시작 + --config CLI 인자 + AppState
+- [x] 단위 테스트: config 파싱, 환경변수 치환, 모델 매칭
+- [x] 빌드 및 기본 동작 검증
 
-### v0.2 (트랜스포머)
+### v0.2 ← 현재
 
-- [ ] transformer.rs 추가
-- [ ] 요청 트랜스포머: model_map, remove_fields, add_fields, headers
-- [ ] 응답 트랜스포머: model_restore, field_map, defaults
-- [ ] SSE 스트리밍 응답 트랜스포머
+- [x] transformer.rs: 요청/응답 변환 (OpenAI 호환 등)
+- [x] pool.rs: API 키 풀 (Least-Connections 분배 + concurrency 제한)
+- [x] config.rs: Fallback enum (false / true / "모델명")
+- [x] proxy.rs: 폴백 시 모델명 교체 (replace_model + apply_fallback_model)
+- [x] configure.rs: 대화형 CLI (enable/disable/add/remove/status + 대화형 메뉴)
+- [x] update.rs: 자체 업데이트 (GitHub 릴리스 확인 + 바이너리 교체)
 
 ### v0.3 (개선)
 

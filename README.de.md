@@ -185,7 +185,10 @@ routes:
 - `${ENV_VAR}`: Umgebungsvariablen-Referenz (API-Schlüssel werden nicht direkt in die Konfigurationsdatei geschrieben)
 - `upstream.auth.pool`: Zusätzliche API-Schlüsselwerte für Lastverteilung (verwendet denselben Header wie `auth.header`)
 - `concurrency`: Gleichzeitige Anfragen-Limit pro Schlüssel (bei Überschreitung Fallback zu Anthropic oder 429 zurückgeben)
-- `fallback`: Ob bei Anbieter-Ausfall auf Anthropic API zurückgegriffen werden soll (Standard: `true`)
+- `fallback`: Fallback-Verhalten bei Anbieter-Ausfall (Standard: `true`)
+  - `false`: Kein Fallback, Fehler unverändert zurückgeben
+  - `true`: Fallback zur Anthropic API mit dem ursprünglichen Modellnamen
+  - `"Modellname"`: Fallback zur Anthropic API mit dem angegebenen Modellnamen (empfohlen für nicht-Anthropic-Modellnamen)
 - Modelle ohne Übereinstimmung werden an `default.url` (Anthropic API) weitergeleitet
 
 ### API-Schlüssel-Pool (Gleichzeitigkeits-Begrenzung)
@@ -212,7 +215,7 @@ routes:
 
 - Anfragen werden an den Schlüssel mit den wenigsten aktiven Verbindungen verteilt (**Least-Connections**)
 - Die gleichzeitige Nutzung jedes Schlüssels wird durch die `concurrency`-Einstellung verfolgt und begrenzt
-- Wenn alle Schlüssel ihr Limit erreichen: Fallback zu Anthropic (wenn `fallback: true`) oder HTTP 429 zurückgeben
+- Wenn alle Schlüssel ihr Limit erreichen: Fallback zu Anthropic (wenn `fallback` aktiviert ist) oder HTTP 429 zurückgeben. Verwenden Sie `fallback: "claude-sonnet-4-5-20250929"` für einen sicheren Fallback mit einem kompatiblen Modellnamen
 - Streaming-Antworten geben den Schlüssel automatisch frei, wenn der Stream endet
 
 ## Ausführung
@@ -528,6 +531,7 @@ journalctl -u summon -f
 - **SSE-Streaming**: Echtzeit-Passthrough in Blöcken
 - **Gleichzeitige Abonnement-Authentifizierung**: Anthropic-OAuth-Tokens bleiben intakt, nur externe Anbieter verwenden API-Schlüssel
 - **API-Schlüssel-Pool**: Unterstützung mehrerer API-Schlüssel pro Route mit Least-Connections-Verteilung für Anbieter mit Pro-Schlüssel-Gleichzeitigkeits-Begrenzungen
+- **Fallback-Modellname**: Geben Sie einen kompatiblen Anthropic-Modellnamen für sicheren Fallback an, wenn nicht-Anthropic-Modellnamen verwendet werden
 - **Sicherheit**: Bindet nur an `127.0.0.1`, API-Schlüssel aus Umgebungsvariablen referenziert
 
 ## ⚠️ Bekannte Einschränkungen
@@ -547,8 +551,8 @@ Dies ist eine Systemarchitektur-Begrenzung, die nicht gelöst werden kann:
 
 ## Fahrplan
 
-- **v0.1** (aktuell): Passthrough + modellbasiertes Routing + SSE-Streaming
-- **v0.2**: Transformator (Anfrage/Antwort-Transformation — für inkompatible Anbieter)
+- **v0.1**: Passthrough + modellbasiertes Routing + SSE-Streaming
+- **v0.2** (aktuell): Transformator, API-Schlüssel-Pool, Fallback-Modellname, interaktive CLI, Selbst-Update
 - **v0.3**: Protokollierung, Gesundheitsprüfung, Hot-Reload, Timeout
 
 ## Lizenz

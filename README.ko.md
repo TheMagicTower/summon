@@ -185,7 +185,10 @@ routes:
 - `${ENV_VAR}`: 환경변수 참조 (API 키를 설정 파일에 직접 기입하지 않음)
 - `upstream.auth.pool`: 부하 분산을 위한 추가 API 키 값 (`auth.header`와 동일한 헤더 사용)
 - `concurrency`: 키별 동시 요청 제한 (초과 시 Anthropic으로 폴백 또는 429 반환)
-- `fallback`: 제공자 실패 시 Anthropic API로 폴백 여부 (기본값: `true`)
+- `fallback`: 제공자 실패 시 폴백 동작 (기본값: `true`)
+  - `false`: 폴백 없음, 에러를 그대로 반환
+  - `true`: 원본 모델명 그대로 Anthropic API로 폴백
+  - `"모델명"`: 지정한 모델명으로 교체하여 Anthropic API로 폴백 (비-Anthropic 모델명에 권장)
 - 매칭되지 않는 모델은 `default.url`(Anthropic API)로 패스스루
 
 ### API 키 풀 (동시성 제한 처리)
@@ -212,7 +215,7 @@ routes:
 
 - 요청은 가장 적은 활성 연결을 가진 키로 분배됩니다 (**Least-Connections**)
 - 각 키의 동시 사용량은 `concurrency` 설정에 의해 추적 및 제한됩니다
-- 모든 키가 한도에 도달하면: Anthropic으로 폴백 (`fallback: true`인 경우) 또는 HTTP 429 반환
+- 모든 키가 한도에 도달하면: Anthropic으로 폴백 (`fallback` 활성화 시) 또는 HTTP 429 반환. `fallback: "claude-sonnet-4-5-20250929"`로 호환 모델명으로 안전하게 폴백 가능
 - 스트리밍 응답은 스트림이 끝날 때 키를 자동으로 해제합니다
 
 ## 실행
@@ -528,6 +531,7 @@ journalctl -u summon -f
 - **SSE 스트리밍**: 청크 단위 실시간 패스스루
 - **구독 인증 병행**: Anthropic OAuth 토큰은 그대로 유지, 외부 제공자만 API 키 교체
 - **API 키 풀**: 키당 동시성 제한이 있는 제공자를 위해 Least-Connections 분배로 라우트당 여러 API 키 지원
+- **폴백 모델명**: 비-Anthropic 모델명 사용 시 호환 가능한 Anthropic 모델명을 지정하여 안전한 폴백
 - **보안**: `127.0.0.1`에만 바인딩, API 키는 환경변수 참조
 
 ## ⚠️ 주의사항 (Known Limitations)
@@ -547,8 +551,8 @@ journalctl -u summon -f
 
 ## 로드맵
 
-- **v0.1** (현재): 패스스루 + 모델 기반 라우팅 + SSE 스트리밍
-- **v0.2**: 트랜스포머 (요청/응답 변환 — 비호환 제공자 지원)
+- **v0.1**: 패스스루 + 모델 기반 라우팅 + SSE 스트리밍
+- **v0.2** (현재): 트랜스포머, API 키 풀, 폴백 모델명, 대화형 CLI, 자체 업데이트
 - **v0.3**: 로깅, 헬스체크, 핫 리로드, 타임아웃
 
 ## 라이선스

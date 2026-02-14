@@ -185,7 +185,10 @@ routes:
 - `${ENV_VAR}`: Tham chiếu biến môi trường (không viết khóa API trực tiếp vào tệp cấu hình)
 - `upstream.auth.pool`: Các giá trị khóa API bổ sung để phân phối tải (sử dụng cùng header với `auth.header`)
 - `concurrency`: Giới hạn yêu cầu đồng thời cho mỗi khóa (khi vượt quá, quay lại Anthropic hoặc trả về 429)
-- `fallback`: Có quay lại Anthropic API khi nhà cung cấp gặp sự cố hay không (mặc định: `true`)
+- `fallback`: Hành vi quay lại khi nhà cung cấp gặp sự cố (mặc định: `true`)
+  - `false`: Không quay lại, trả về lỗi nguyên trạng
+  - `true`: Quay lại Anthropic API với tên mô hình gốc
+  - `"tên-mô-hình"`: Quay lại Anthropic API với tên mô hình được chỉ định (khuyến nghị cho tên mô hình không phải Anthropic)
 - Các mô hình không khớp được chuyển qua `default.url` (Anthropic API)
 
 ### Pool khóa API (Xử lý giới hạn đồng thời)
@@ -212,7 +215,7 @@ routes:
 
 - Các yêu cầu được phân phối đến khóa có ít kết nối hoạt động nhất (**Least-Connections**)
 - Việc sử dụng đồng thời của mỗi khóa được theo dõi và giới hạn bởi cài đặt `concurrency`
-- Khi tất cả các khóa đạt đến giới hạn: quay lại Anthropic (nếu `fallback: true`) hoặc trả về HTTP 429
+- Khi tất cả các khóa đạt đến giới hạn: quay lại Anthropic (nếu `fallback` được bật) hoặc trả về HTTP 429. Sử dụng `fallback: "claude-sonnet-4-5-20250929"` để quay lại an toàn với tên mô hình tương thích
 - Các phản hồi streaming tự động giải phóng khóa khi luồng kết thúc
 
 ## Chạy
@@ -528,6 +531,7 @@ journalctl -u summon -f
 - **Streaming SSE**: Passthrough thời gian thực theo từng khối
 - **Xác thực đăng ký đồng thời**: Token OAuth Anthropic được giữ nguyên, chỉ nhà cung cấp bên ngoài sử dụng khóa API
 - **Pool khóa API**: Hỗ trợ nhiều khóa API cho mỗi tuyến với phân phối Least-Connections cho các nhà cung cấp có giới hạn đồng thời cho mỗi khóa
+- **Tên mô hình dự phòng**: Chỉ định tên mô hình Anthropic tương thích để quay lại an toàn khi sử dụng tên mô hình không phải Anthropic
 - **Bảo mật**: Chỉ bind đến `127.0.0.1`, khóa API được tham chiếu từ biến môi trường
 
 ## ⚠️ Hạn chế đã biết
@@ -547,8 +551,8 @@ journalctl -u summon -f
 
 ## Lộ trình
 
-- **v0.1** (hiện tại): Passthrough + định tuyến dựa trên mô hình + streaming SSE
-- **v0.2**: Bộ biến đổi (chuyển đổi yêu cầu/phản hồi — cho các nhà cung cấp không tương thích)
+- **v0.1**: Passthrough + định tuyến dựa trên mô hình + streaming SSE
+- **v0.2** (hiện tại): Bộ biến đổi, pool khóa API, tên mô hình dự phòng, CLI tương tác, tự cập nhật
 - **v0.3**: Ghi nhật ký, kiểm tra sức khỏe, tải lại nóng, thời gian chờ
 
 ## Giấy phép
