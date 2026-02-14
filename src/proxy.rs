@@ -18,22 +18,39 @@ fn is_auth_header(name: &str) -> bool {
     name.eq_ignore_ascii_case("x-api-key") || name.eq_ignore_ascii_case("authorization")
 }
 
-/// 요청 헤더에서 세션 식별자 해시 추출
+/// 요청 본문에서 세션 식별자 해시 추출
 ///
-/// 동일한 클라이언트(인증 토큰)에서 온 요청에 동일한 API 키를 배정하여
-/// 프롬프트 캐시를 재활용할 수 있도록 인증 헤더 값을 해시한다.
-fn session_hash(headers: &hyper::HeaderMap) -> u64 {
+/// system 프롬프트의 앞부분을 해시하여 동일 세션/프로젝트의 요청이
+/// 동일한 API 키를 사용하도록 한다. Claude Code 세션마다 고유한
+/// 프로젝트 경로, CLAUDE.md 등이 system 프롬프트에 포함되므로
+/// 세션 구분이 가능하다.
+fn session_hash(body: &[u8]) -> u64 {
     use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
 
-    let key = headers
-        .get("x-api-key")
-        .or_else(|| headers.get("authorization"))
-        .map(|v| v.as_bytes())
-        .unwrap_or(b"");
+    let prefix = serde_json::from_slice::<serde_json::Value>(body)
+        .ok()
+        .and_then(|v| {
+            match &v["system"] {
+                serde_json::Value::String(s) => {
+                    let end = s.len().min(512);
+                    Some(s[..end].to_string())
+                }
+                serde_json::Value::Array(arr) => {
+                    arr.first()
+                        .and_then(|item| item["text"].as_str())
+                        .map(|s| {
+                            let end = s.len().min(512);
+                            s[..end].to_string()
+                        })
+                }
+                _ => None,
+            }
+        })
+        .unwrap_or_default();
 
     let mut hasher = DefaultHasher::new();
-    key.hash(&mut hasher);
+    prefix.hash(&mut hasher);
     hasher.finish()
 }
 
@@ -120,7 +137,7 @@ pub async fn proxy_handler(
     // 키 풀이 있는 라우트: 429 시 다른 키로 재시도하는 루프
     if route.upstream.auth.has_pool() {
         let mut tried_keys: Vec<usize> = Vec::new();
-        let sess_hash = session_hash(&parts.headers);
+        let sess_hash = session_hash(&bytes);
 
         loop {
             // 첫 시도: 세션 친화로 동일 키 재사용 (프롬프트 캐시 활용)
