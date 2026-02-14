@@ -1,7 +1,11 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::config::Config;
+
+/// 기본 쿨다운 시간 (Retry-After 헤더가 없을 때)
+const DEFAULT_COOLDOWN_SECS: u64 = 60;
 
 /// 라우트별 API 키 풀 — Least-Connections 방식 분배
 ///
@@ -15,10 +19,20 @@ pub struct KeyPool {
 struct PoolEntry {
     /// 키별 활성 연결 수
     active: Vec<AtomicUsize>,
+    /// 키별 쿨다운 만료 시각 (Unix epoch 초, 0이면 쿨다운 없음)
+    cooldown_until: Vec<AtomicU64>,
     /// 키당 동시 요청 제한 (None = 무제한)
     concurrency: Option<usize>,
     /// 라운드 로빈 카운터 (동점 시 순환 분배)
     next_idx: AtomicUsize,
+}
+
+/// 현재 시각을 Unix epoch 초로 반환
+fn now_epoch_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or(Duration::ZERO)
+        .as_secs()
 }
 
 impl KeyPool {
@@ -32,6 +46,7 @@ impl KeyPool {
                     let pool_size = route.upstream.auth.all_values().len();
                     Some(PoolEntry {
                         active: (0..pool_size).map(|_| AtomicUsize::new(0)).collect(),
+                        cooldown_until: (0..pool_size).map(|_| AtomicU64::new(0)).collect(),
                         concurrency: route.concurrency,
                         next_idx: AtomicUsize::new(0),
                     })
@@ -51,16 +66,21 @@ impl KeyPool {
         let entry = self.entries.get(route_idx)?.as_ref()?;
         let limit = entry.concurrency.unwrap_or(usize::MAX);
         let pool_size = entry.active.len();
+        let now = now_epoch_secs();
 
         // 라운드 로빈 오프셋: 동점 시 매번 다른 키부터 탐색
         let offset = entry.next_idx.fetch_add(1, Ordering::Relaxed);
 
         // 오프셋부터 순환 탐색하여 활성 연결이 가장 적은 키 선택
+        // 쿨다운 중인 키는 건너뜀
         let mut best_idx = None;
         let mut best_count = usize::MAX;
 
         for j in 0..pool_size {
             let i = (offset + j) % pool_size;
+            if entry.cooldown_until[i].load(Ordering::Relaxed) > now {
+                continue;
+            }
             let count = entry.active[i].load(Ordering::Relaxed);
             if count < limit && count < best_count {
                 best_count = count;
@@ -73,7 +93,7 @@ impl KeyPool {
                 entry.active[idx].fetch_add(1, Ordering::Relaxed);
                 Some(idx)
             }
-            None => None, // 모든 키가 concurrency 제한에 도달
+            None => None, // 모든 키가 제한 또는 쿨다운 중
         }
     }
 
@@ -84,6 +104,7 @@ impl KeyPool {
         let entry = self.entries.get(route_idx)?.as_ref()?;
         let limit = entry.concurrency.unwrap_or(usize::MAX);
         let pool_size = entry.active.len();
+        let now = now_epoch_secs();
 
         let offset = entry.next_idx.fetch_add(1, Ordering::Relaxed);
 
@@ -93,6 +114,9 @@ impl KeyPool {
         for j in 0..pool_size {
             let i = (offset + j) % pool_size;
             if exclude.contains(&i) {
+                continue;
+            }
+            if entry.cooldown_until[i].load(Ordering::Relaxed) > now {
                 continue;
             }
             let count = entry.active[i].load(Ordering::Relaxed);
@@ -116,6 +140,26 @@ impl KeyPool {
         if let Some(Some(entry)) = self.entries.get(route_idx) {
             if let Some(c) = entry.active.get(key_idx) {
                 c.fetch_sub(1, Ordering::Relaxed);
+            }
+        }
+    }
+
+    /// 429 응답을 받은 키에 쿨다운 설정
+    ///
+    /// `retry_after_secs`가 Some이면 해당 값 사용 (Retry-After 헤더),
+    /// None이면 기본 60초 적용.
+    pub fn set_cooldown(&self, route_idx: usize, key_idx: usize, retry_after_secs: Option<u64>) {
+        if let Some(Some(entry)) = self.entries.get(route_idx) {
+            if let Some(cd) = entry.cooldown_until.get(key_idx) {
+                let secs = retry_after_secs.unwrap_or(DEFAULT_COOLDOWN_SECS);
+                let until = now_epoch_secs() + secs;
+                cd.store(until, Ordering::Relaxed);
+                tracing::warn!(
+                    route = route_idx,
+                    key = key_idx,
+                    cooldown_secs = secs,
+                    "429 수신, 키 쿨다운 설정"
+                );
             }
         }
     }
@@ -348,5 +392,59 @@ mod tests {
         pool.release(0, k2);
         let k = pool.acquire_excluding(0, &[k0, k1]).unwrap();
         assert_eq!(k, k2);
+    }
+
+    #[test]
+    fn test_cooldown_skips_key() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // key 0에 쿨다운 설정 (60초)
+        pool.set_cooldown(0, 0, None);
+
+        // key 0은 쿨다운 중이므로 건너뛰고 key 1 선택
+        let k = pool.acquire(0).unwrap();
+        assert_ne!(k, 0, "쿨다운 중인 key 0이 선택되면 안 됨");
+        pool.release(0, k);
+    }
+
+    #[test]
+    fn test_cooldown_with_retry_after() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // key 0에 Retry-After 120초 설정
+        pool.set_cooldown(0, 0, Some(120));
+
+        // key 0은 쿨다운 중이므로 건너뛰고 key 1 또는 2 선택
+        let k = pool.acquire(0).unwrap();
+        assert_ne!(k, 0, "쿨다운 중인 key 0이 선택되면 안 됨");
+        pool.release(0, k);
+    }
+
+    #[test]
+    fn test_all_keys_cooldown_returns_none() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // 모든 키에 쿨다운 설정
+        pool.set_cooldown(0, 0, Some(60));
+        pool.set_cooldown(0, 1, Some(60));
+        pool.set_cooldown(0, 2, Some(60));
+
+        // 사용 가능한 키 없음
+        assert!(pool.acquire(0).is_none());
+    }
+
+    #[test]
+    fn test_cooldown_excluded_in_acquire_excluding() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // key 0 제외, key 1 쿨다운 → key 2만 사용 가능
+        pool.set_cooldown(0, 1, Some(60));
+        let k = pool.acquire_excluding(0, &[0]).unwrap();
+        assert_eq!(k, 2, "key 0 제외 + key 1 쿨다운 → key 2만 사용 가능");
+        pool.release(0, k);
     }
 }

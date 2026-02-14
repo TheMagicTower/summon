@@ -18,6 +18,19 @@ fn is_auth_header(name: &str) -> bool {
     name.eq_ignore_ascii_case("x-api-key") || name.eq_ignore_ascii_case("authorization")
 }
 
+/// 응답에서 Retry-After 헤더 값을 초 단위로 파싱
+/// - 숫자: 그대로 초 단위 반환
+/// - 파싱 실패 또는 헤더 없음: None (호출자가 기본값 사용)
+fn parse_retry_after(resp: &Response<Body>) -> Option<u64> {
+    resp.headers()
+        .get("retry-after")?
+        .to_str()
+        .ok()?
+        .trim()
+        .parse::<u64>()
+        .ok()
+}
+
 /// JSON 본문에서 model 필드 추출
 fn extract_model(bytes: &[u8]) -> Result<String, StatusCode> {
     let value: serde_json::Value =
@@ -106,7 +119,8 @@ pub async fn proxy_handler(
 
                     match forward(&state, &parts, bytes.clone(), Some(route), Some(selected.as_str())).await {
                         Ok(resp) if resp.status() == StatusCode::TOO_MANY_REQUESTS => {
-                            tracing::warn!(key_idx, "429 응답, 다른 키로 재시도");
+                            let retry_after = parse_retry_after(&resp);
+                            state.key_pool.set_cooldown(route_idx, key_idx, retry_after);
                             drop(guard);
                             tried_keys.push(key_idx);
                             continue;
