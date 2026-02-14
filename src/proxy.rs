@@ -271,9 +271,10 @@ async fn forward(
         .method(parts.method.clone())
         .uri(&uri_string);
 
-    // 헤더 복사 (host 제외, 라우팅 시 기존 인증 헤더도 제외)
+    // 헤더 복사 (host, content-length 제외, 라우팅 시 기존 인증 헤더도 제외)
+    // content-length는 hyper가 실제 body 크기로 자동 설정 (폴백 시 body 변경 대응)
     for (key, value) in parts.headers.iter() {
-        if key == hyper::header::HOST {
+        if key == hyper::header::HOST || key == hyper::header::CONTENT_LENGTH {
             continue;
         }
         if route.is_some() && is_auth_header(key.as_str()) {
