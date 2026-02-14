@@ -18,6 +18,25 @@ fn is_auth_header(name: &str) -> bool {
     name.eq_ignore_ascii_case("x-api-key") || name.eq_ignore_ascii_case("authorization")
 }
 
+/// 요청 헤더에서 세션 식별자 해시 추출
+///
+/// 동일한 클라이언트(인증 토큰)에서 온 요청에 동일한 API 키를 배정하여
+/// 프롬프트 캐시를 재활용할 수 있도록 인증 헤더 값을 해시한다.
+fn session_hash(headers: &hyper::HeaderMap) -> u64 {
+    use std::hash::{Hash, Hasher};
+    use std::collections::hash_map::DefaultHasher;
+
+    let key = headers
+        .get("x-api-key")
+        .or_else(|| headers.get("authorization"))
+        .map(|v| v.as_bytes())
+        .unwrap_or(b"");
+
+    let mut hasher = DefaultHasher::new();
+    key.hash(&mut hasher);
+    hasher.finish()
+}
+
 /// 응답에서 Retry-After 헤더 값을 초 단위로 파싱
 /// - 숫자: 그대로 초 단위 반환
 /// - 파싱 실패 또는 헤더 없음: None (호출자가 기본값 사용)
@@ -101,11 +120,13 @@ pub async fn proxy_handler(
     // 키 풀이 있는 라우트: 429 시 다른 키로 재시도하는 루프
     if route.upstream.auth.has_pool() {
         let mut tried_keys: Vec<usize> = Vec::new();
+        let sess_hash = session_hash(&parts.headers);
 
         loop {
-            // 이미 시도한 키를 제외하고 다음 키 획득
+            // 첫 시도: 세션 친화로 동일 키 재사용 (프롬프트 캐시 활용)
+            // 재시도: 이미 시도한 키를 제외하고 LC로 할당
             let key_idx = if tried_keys.is_empty() {
-                state.key_pool.acquire(route_idx)
+                state.key_pool.acquire_sticky(route_idx, sess_hash)
             } else {
                 state.key_pool.acquire_excluding(route_idx, &tried_keys)
             };
