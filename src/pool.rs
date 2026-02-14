@@ -17,6 +17,8 @@ struct PoolEntry {
     active: Vec<AtomicUsize>,
     /// 키당 동시 요청 제한 (None = 무제한)
     concurrency: Option<usize>,
+    /// 라운드 로빈 카운터 (동점 시 순환 분배)
+    next_idx: AtomicUsize,
 }
 
 impl KeyPool {
@@ -31,6 +33,7 @@ impl KeyPool {
                     Some(PoolEntry {
                         active: (0..pool_size).map(|_| AtomicUsize::new(0)).collect(),
                         concurrency: route.concurrency,
+                        next_idx: AtomicUsize::new(0),
                     })
                 } else {
                     None
@@ -47,24 +50,26 @@ impl KeyPool {
     pub fn acquire(&self, route_idx: usize) -> Option<usize> {
         let entry = self.entries.get(route_idx)?.as_ref()?;
         let limit = entry.concurrency.unwrap_or(usize::MAX);
+        let pool_size = entry.active.len();
 
-        // 제한 이하인 키 중 가장 활성 연결이 적은 키 선택
-        let best = entry
-            .active
-            .iter()
-            .enumerate()
-            .filter_map(|(i, c)| {
-                let count = c.load(Ordering::Relaxed);
-                if count < limit {
-                    Some((i, count))
-                } else {
-                    None
-                }
-            })
-            .min_by_key(|(_, count)| *count);
+        // 라운드 로빈 오프셋: 동점 시 매번 다른 키부터 탐색
+        let offset = entry.next_idx.fetch_add(1, Ordering::Relaxed);
 
-        match best {
-            Some((idx, _)) => {
+        // 오프셋부터 순환 탐색하여 활성 연결이 가장 적은 키 선택
+        let mut best_idx = None;
+        let mut best_count = usize::MAX;
+
+        for j in 0..pool_size {
+            let i = (offset + j) % pool_size;
+            let count = entry.active[i].load(Ordering::Relaxed);
+            if count < limit && count < best_count {
+                best_count = count;
+                best_idx = Some(i);
+            }
+        }
+
+        match best_idx {
+            Some(idx) => {
                 entry.active[idx].fetch_add(1, Ordering::Relaxed);
                 Some(idx)
             }
@@ -250,5 +255,26 @@ mod tests {
 
         let freed = pool.acquire(0).unwrap();
         assert_eq!(freed, 2);
+    }
+
+    #[test]
+    fn test_round_robin_sequential_requests() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // 순차 요청: acquire → release → acquire → release ...
+        // 라운드 로빈으로 키가 순환되어야 함
+        for expected in 0..3 {
+            let k = pool.acquire(0).unwrap();
+            assert_eq!(k, expected, "{}번째 순차 요청이 key {}이 아닌 key {}에 배정됨", expected, expected, k);
+            pool.release(0, k);
+        }
+
+        // 두 번째 라운드: 다시 0, 1, 2 순환
+        for expected in 0..3 {
+            let k = pool.acquire(0).unwrap();
+            assert_eq!(k, expected, "두 번째 라운드 {}번째가 key {}이 아님", expected, k);
+            pool.release(0, k);
+        }
     }
 }
