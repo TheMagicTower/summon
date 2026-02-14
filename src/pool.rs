@@ -77,6 +77,40 @@ impl KeyPool {
         }
     }
 
+    /// 특정 키를 제외하고 Least-Connections 방식으로 키 획득
+    ///
+    /// 429 응답을 받은 키를 제외하고 다른 키를 선택할 때 사용.
+    pub fn acquire_excluding(&self, route_idx: usize, exclude: &[usize]) -> Option<usize> {
+        let entry = self.entries.get(route_idx)?.as_ref()?;
+        let limit = entry.concurrency.unwrap_or(usize::MAX);
+        let pool_size = entry.active.len();
+
+        let offset = entry.next_idx.fetch_add(1, Ordering::Relaxed);
+
+        let mut best_idx = None;
+        let mut best_count = usize::MAX;
+
+        for j in 0..pool_size {
+            let i = (offset + j) % pool_size;
+            if exclude.contains(&i) {
+                continue;
+            }
+            let count = entry.active[i].load(Ordering::Relaxed);
+            if count < limit && count < best_count {
+                best_count = count;
+                best_idx = Some(i);
+            }
+        }
+
+        match best_idx {
+            Some(idx) => {
+                entry.active[idx].fetch_add(1, Ordering::Relaxed);
+                Some(idx)
+            }
+            None => None,
+        }
+    }
+
     /// 키 해제 (활성 연결 카운터 감소)
     pub fn release(&self, route_idx: usize, key_idx: usize) {
         if let Some(Some(entry)) = self.entries.get(route_idx) {
@@ -276,5 +310,43 @@ mod tests {
             assert_eq!(k, expected, "두 번째 라운드 {}번째가 key {}이 아님", expected, k);
             pool.release(0, k);
         }
+    }
+
+    #[test]
+    fn test_acquire_excluding_skips_keys() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // key 0을 제외하면 key 1 또는 2가 선택되어야 함
+        let k = pool.acquire_excluding(0, &[0]).unwrap();
+        assert!(k == 1 || k == 2, "key 0 제외 시 key {}가 선택됨", k);
+        pool.release(0, k);
+
+        // key 0, 1 제외하면 key 2만 남음
+        let k = pool.acquire_excluding(0, &[0, 1]).unwrap();
+        assert_eq!(k, 2);
+        pool.release(0, k);
+
+        // 전부 제외하면 None
+        assert!(pool.acquire_excluding(0, &[0, 1, 2]).is_none());
+    }
+
+    #[test]
+    fn test_acquire_excluding_respects_concurrency() {
+        let config = make_pool_config();
+        let pool = KeyPool::from_config(&config);
+
+        // 3개 키 모두 점유 (concurrency=1)
+        let k0 = pool.acquire(0).unwrap();
+        let k1 = pool.acquire(0).unwrap();
+        let k2 = pool.acquire(0).unwrap();
+
+        // 전부 꽉 참 → exclude 없어도 None
+        assert!(pool.acquire_excluding(0, &[]).is_none());
+
+        // key 2만 해제 → exclude에 0, 1 넣어도 key 2 획득 가능
+        pool.release(0, k2);
+        let k = pool.acquire_excluding(0, &[k0, k1]).unwrap();
+        assert_eq!(k, k2);
     }
 }

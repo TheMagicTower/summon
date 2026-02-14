@@ -77,70 +77,107 @@ pub async fn proxy_handler(
 
     tracing::info!(model = %model, routed = route_match.is_some(), "라우팅 결정");
 
-    // 키 풀에서 키 획득
-    let (route, auth_value, pool_guard) = match route_match {
-        Some((route_idx, route)) => {
-            match state.key_pool.acquire(route_idx) {
+    // 라우팅 대상이 아니면 패스스루
+    let (route_idx, route) = match route_match {
+        Some(pair) => pair,
+        None => {
+            return forward(&state, &parts, bytes, None, None).await;
+        }
+    };
+
+    // 키 풀이 있는 라우트: 429 시 다른 키로 재시도하는 루프
+    if route.upstream.auth.has_pool() {
+        let mut tried_keys: Vec<usize> = Vec::new();
+
+        loop {
+            // 이미 시도한 키를 제외하고 다음 키 획득
+            let key_idx = if tried_keys.is_empty() {
+                state.key_pool.acquire(route_idx)
+            } else {
+                state.key_pool.acquire_excluding(route_idx, &tried_keys)
+            };
+
+            match key_idx {
                 Some(key_idx) => {
                     let values = route.upstream.auth.all_values();
-                    let selected = values[key_idx].clone();
+                    let selected = &values[key_idx];
                     let guard = PoolGuard::new(state.key_pool.clone(), route_idx, key_idx);
-                    tracing::debug!(route_idx, key_idx, "키 풀에서 키 선택");
-                    (Some(route), Some(selected), Some(guard))
-                }
-                None => {
-                    // 풀이 없거나 모든 키가 concurrency 제한 도달
-                    if route.upstream.auth.has_pool() {
-                        tracing::warn!(
-                            model = %model,
-                            "모든 API 키가 동시 요청 제한에 도달"
-                        );
-                        if route.fallback.is_enabled() {
-                            tracing::info!("Anthropic API로 폴백");
+                    tracing::debug!(route_idx, key_idx, tried = ?tried_keys, "키 풀에서 키 선택");
+
+                    match forward(&state, &parts, bytes.clone(), Some(route), Some(selected.as_str())).await {
+                        Ok(resp) if resp.status() == StatusCode::TOO_MANY_REQUESTS => {
+                            tracing::warn!(key_idx, "429 응답, 다른 키로 재시도");
+                            drop(guard);
+                            tried_keys.push(key_idx);
+                            continue;
+                        }
+                        Ok(resp) if resp.status().is_success() => {
+                            return Ok(attach_guard(resp, Some(guard)));
+                        }
+                        Ok(resp) if route.fallback.is_enabled() => {
+                            tracing::warn!(
+                                status = %resp.status(),
+                                "외부 제공자 비성공 응답, Anthropic API로 폴백"
+                            );
+                            drop(guard);
                             let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
                             return forward(&state, &parts, fallback_bytes, None, None).await;
-                        } else {
-                            return Err(StatusCode::TOO_MANY_REQUESTS);
+                        }
+                        Ok(resp) => {
+                            return Ok(attach_guard(resp, Some(guard)));
+                        }
+                        Err(_) if route.fallback.is_enabled() => {
+                            tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
+                            drop(guard);
+                            let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                            return forward(&state, &parts, fallback_bytes, None, None).await;
+                        }
+                        Err(e) => {
+                            return Err(e);
                         }
                     }
-                    // 풀이 없으면 기존 auth 사용
-                    (Some(route), None, None)
+                }
+                None => {
+                    // 모든 키 소진 (concurrency 제한 또는 전부 429)
+                    tracing::warn!(
+                        model = %model,
+                        tried = tried_keys.len(),
+                        "사용 가능한 API 키 없음"
+                    );
+                    if route.fallback.is_enabled() {
+                        tracing::info!("Anthropic API로 폴백");
+                        let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                        return forward(&state, &parts, fallback_bytes, None, None).await;
+                    } else {
+                        return Err(StatusCode::TOO_MANY_REQUESTS);
+                    }
                 }
             }
         }
-        None => (None, None, None),
-    };
+    }
 
-    let auth_override = auth_value.as_deref();
-
-    match route {
-        Some(route) if route.fallback.is_enabled() => {
-            // 폴백 활성화: 외부 제공자 실패 시 Anthropic API로 재시도
-            match forward(&state, &parts, bytes.clone(), Some(route), auth_override).await {
-                Ok(resp) if resp.status().is_success() => {
-                    Ok(attach_guard(resp, pool_guard))
-                }
+    // 풀이 없는 라우트: 단일 키로 시도
+    match route.fallback.is_enabled() {
+        true => {
+            match forward(&state, &parts, bytes.clone(), Some(route), None).await {
+                Ok(resp) if resp.status().is_success() => Ok(resp),
                 Ok(resp) => {
                     tracing::warn!(
                         status = %resp.status(),
                         "외부 제공자 비성공 응답, Anthropic API로 폴백"
                     );
-                    drop(pool_guard);
                     let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
                     forward(&state, &parts, fallback_bytes, None, None).await
                 }
                 Err(_) => {
                     tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
-                    drop(pool_guard);
                     let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
                     forward(&state, &parts, fallback_bytes, None, None).await
                 }
             }
         }
-        _ => {
-            // 폴백 비활성화 또는 라우팅 미매칭: 기존 동작 유지
-            let resp = forward(&state, &parts, bytes, route, auth_override).await?;
-            Ok(attach_guard(resp, pool_guard))
+        false => {
+            forward(&state, &parts, bytes, Some(route), None).await
         }
     }
 }
