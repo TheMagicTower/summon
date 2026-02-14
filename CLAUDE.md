@@ -52,8 +52,9 @@ Claude Code CLI
 ```
 src/
 ├── main.rs        # 엔트리포인트, CLI 파싱 (Configure/Update), AppState, axum 서버 시작
-├── config.rs      # Config 구조체, YAML 로드, ${ENV_VAR} 치환, find_route 모델 매칭
-├── proxy.rs       # 프록시 핸들러, 패스스루/라우팅 포워딩, SSE 스트리밍
+├── config.rs      # Config 구조체, YAML 로드, ${ENV_VAR} 치환, Fallback enum, find_route
+├── proxy.rs       # 프록시 핸들러, 패스스루/라우팅 포워딩, 폴백 모델 교체, SSE 스트리밍
+├── pool.rs        # API 키 풀 (Least-Connections 분배, PoolGuard 자동 해제)
 ├── configure.rs   # 대화형 설정 관리 (enable/disable/add/remove/status 등 + 대화형 메뉴)
 ├── transformer.rs # 요청/응답 변환 (비호환 제공자 지원)
 └── update.rs      # 자체 업데이트 (GitHub 릴리스 확인 + 바이너리 교체)
@@ -73,6 +74,9 @@ src/
 - `default.url`: 기본 업스트림 (Anthropic API)
 - `routes[].match`: 모델명 부분 문자열 매칭 (위→아래 순서, 첫 매칭 적용)
 - `routes[].upstream.auth`: `header` + `value` (환경변수 `${VAR}` 참조 지원)
+- `routes[].upstream.auth.pool`: 부하 분산용 추가 API 키
+- `routes[].concurrency`: 키당 동시 요청 제한
+- `routes[].fallback`: `false` / `true` / `"모델명"` (폴백 동작 설정)
 
 ## 개발 규칙
 
@@ -84,6 +88,6 @@ src/
 
 ## 버전 로드맵
 
-- **v0.1 (MVP)**: 패스스루 + 모델 기반 라우팅 + SSE 스트리밍
-- **v0.2**: 트랜스포머 (요청/응답 변환 — 비호환 제공자 지원)
+- **v0.1**: 패스스루 + 모델 기반 라우팅 + SSE 스트리밍
+- **v0.2** (현재): 트랜스포머, API 키 풀, 폴백 모델명, 대화형 CLI, 자체 업데이트
 - **v0.3**: 로깅, 헬스체크, 핫 리로드, 타임아웃
