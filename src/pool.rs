@@ -292,6 +292,7 @@ mod tests {
                     model_map: None,
                     fallback: Fallback::Passthrough,
                     concurrency: Some(1),
+                    account_concurrency: None,
                 },
                 // 라우트 1: 풀 없음
                 RouteConfig {
@@ -313,6 +314,7 @@ mod tests {
                     model_map: None,
                     fallback: Fallback::Passthrough,
                     concurrency: None,
+                    account_concurrency: None,
                 },
             ],
         }

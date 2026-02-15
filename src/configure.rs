@@ -480,6 +480,7 @@ fn add_route(config_path: &str) {
         model_map: None,
         fallback,
         concurrency: None,
+        account_concurrency: None,
     };
 
     config.routes.push(route);
