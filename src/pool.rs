@@ -15,6 +15,17 @@ pub struct AccountSemaphore {
     semaphores: Vec<Option<Arc<Semaphore>>>,
 }
 
+/// 세마포어 자동 해제 가드
+pub struct SemaphoreGuard {
+    _permit: tokio::sync::OwnedSemaphorePermit,
+}
+
+impl SemaphoreGuard {
+    pub fn new(permit: tokio::sync::OwnedSemaphorePermit) -> Self {
+        SemaphoreGuard { _permit: permit }
+    }
+}
+
 impl AccountSemaphore {
     /// Config로부터 AccountSemaphore 생성
     pub fn from_config(config: &Config) -> Self {
@@ -42,16 +53,16 @@ impl AccountSemaphore {
     pub async fn acquire(
         &self,
         route_idx: usize,
-    ) -> Option<tokio::sync::SemaphorePermit<'_>> {
+    ) -> Option<SemaphoreGuard> {
         match self.semaphores.get(route_idx)? {
             Some(sem) => {
-                let permit = sem.acquire().await.ok()?;
+                let permit = sem.clone().acquire_owned().await.ok()?;
                 tracing::info!(
                     route_idx,
                     available_permits = sem.available_permits(),
                     "계정 세마포어 획득"
                 );
-                Some(permit)
+                Some(SemaphoreGuard::new(permit))
             }
             None => None, // 제한 없음
         }
