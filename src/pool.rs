@@ -617,4 +617,103 @@ mod tests {
         assert_ne!(k1, k2, "쿨다운 중인 키 대신 다른 키가 할당되어야 함");
         pool.release(0, k2);
     }
+
+    #[tokio::test]
+    async fn test_account_semaphore_basic() {
+        let config = Config {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 18081,
+            },
+            default: DefaultConfig {
+                url: "https://api.anthropic.com".into(),
+            },
+            routes: vec![RouteConfig {
+                match_pattern: "test".into(),
+                upstream: UpstreamConfig {
+                    url: "https://test.com".into(),
+                    auth: AuthConfig {
+                        auth_type: "api_key".into(),
+                        header: Some("x-api-key".into()),
+                        value: Some("key1".into()),
+                        client_id: None,
+                        client_secret: None,
+                        refresh_token: None,
+                        token_url: None,
+                        pool: None,
+                    },
+                },
+                transformer: None,
+                model_map: None,
+                fallback: Fallback::Passthrough,
+                concurrency: None,
+                account_concurrency: Some(2), // 동시 2개 제한
+            }],
+        };
+
+        let sem = AccountSemaphore::from_config(&config);
+
+        // 2개 동시 획득 가능
+        let permit1 = sem.acquire(0).await;
+        assert!(permit1.is_some());
+
+        let permit2 = sem.acquire(0).await;
+        assert!(permit2.is_some());
+
+        // 3번째는 대기 (타임아웃으로 확인)
+        let result = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            sem.acquire(0),
+        )
+        .await;
+        assert!(result.is_err(), "3번째 acquire는 타임아웃되어야 함");
+
+        // permit1 해제 후 3번째 획득 가능
+        drop(permit1);
+        let permit3 = sem.acquire(0).await;
+        assert!(permit3.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_account_semaphore_no_limit() {
+        let config = Config {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 18081,
+            },
+            default: DefaultConfig {
+                url: "https://api.anthropic.com".into(),
+            },
+            routes: vec![RouteConfig {
+                match_pattern: "test".into(),
+                upstream: UpstreamConfig {
+                    url: "https://test.com".into(),
+                    auth: AuthConfig {
+                        auth_type: "api_key".into(),
+                        header: Some("x-api-key".into()),
+                        value: Some("key1".into()),
+                        client_id: None,
+                        client_secret: None,
+                        refresh_token: None,
+                        token_url: None,
+                        pool: None,
+                    },
+                },
+                transformer: None,
+                model_map: None,
+                fallback: Fallback::Passthrough,
+                concurrency: None,
+                account_concurrency: None, // 제한 없음
+            }],
+        };
+
+        let sem = AccountSemaphore::from_config(&config);
+
+        // 무제한 획득 가능 (None 반환)
+        let p1 = sem.acquire(0).await;
+        assert!(p1.is_none(), "제한 없으면 None 반환");
+
+        let p2 = sem.acquire(0).await;
+        assert!(p2.is_none());
+    }
 }
