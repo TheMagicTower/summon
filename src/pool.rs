@@ -2,11 +2,61 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::Semaphore;
 
 use crate::config::Config;
 
 /// 기본 쿨다운 시간 (Retry-After 헤더가 없을 때)
 const DEFAULT_COOLDOWN_SECS: u64 = 60;
+
+/// 라우트별 계정 단위 동시성 제어
+pub struct AccountSemaphore {
+    /// 라우트별 세마포어 (None = 제한 없음)
+    semaphores: Vec<Option<Arc<Semaphore>>>,
+}
+
+impl AccountSemaphore {
+    /// Config로부터 AccountSemaphore 생성
+    pub fn from_config(config: &Config) -> Self {
+        let semaphores = config
+            .routes
+            .iter()
+            .map(|route| {
+                route
+                    .account_concurrency
+                    .map(|limit| Arc::new(Semaphore::new(limit)))
+            })
+            .collect();
+
+        AccountSemaphore { semaphores }
+    }
+
+    /// 세마포어 획득 (비동기 대기)
+    ///
+    /// # 반환값
+    /// - `Some(permit)`: account_concurrency가 설정되어 있고 획득 성공
+    /// - `None`: account_concurrency가 설정되지 않음 (무제한)
+    ///
+    /// # 주의
+    /// route_idx가 범위를 벗어나거나 세마포어 획득 실패 시에도 None 반환
+    pub async fn acquire(
+        &self,
+        route_idx: usize,
+    ) -> Option<tokio::sync::SemaphorePermit<'_>> {
+        match self.semaphores.get(route_idx)? {
+            Some(sem) => {
+                let permit = sem.acquire().await.ok()?;
+                tracing::info!(
+                    route_idx,
+                    available_permits = sem.available_permits(),
+                    "계정 세마포어 획득"
+                );
+                Some(permit)
+            }
+            None => None, // 제한 없음
+        }
+    }
+}
 
 /// 라우트별 API 키 풀 — Least-Connections 방식 분배 + 세션 친화
 ///
