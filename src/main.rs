@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use std::sync::Arc;
 
 use config::Config;
-use pool::KeyPool;
+use pool::{KeyPool, AccountSemaphore};
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
@@ -27,6 +27,7 @@ pub struct AppState {
     pub config: Config,
     pub client: HttpClient,
     pub key_pool: Arc<KeyPool>,
+    pub account_semaphore: Arc<AccountSemaphore>,
 }
 
 #[derive(Parser)]
@@ -129,8 +130,9 @@ async fn run_server(config_path: &str) {
 
     // 4. 키 풀 초기화 및 AppState 생성
     let key_pool = Arc::new(KeyPool::from_config(&config));
+    let account_semaphore = Arc::new(AccountSemaphore::from_config(&config));
     let addr = format!("{}:{}", config.server.host, config.server.port);
-    let state = AppState { config: config.clone(), client, key_pool };
+    let state = AppState { config: config.clone(), client, key_pool, account_semaphore };
 
     // 5. axum 라우터 구성
     let app = Router::new()
