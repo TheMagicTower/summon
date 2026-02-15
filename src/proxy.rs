@@ -7,11 +7,15 @@ use http_body_util::{BodyExt, Full};
 use uuid::Uuid;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::config::RouteConfig;
 use crate::pool::PoolGuard;
 use crate::transformer::{self, StreamContext, Transformer};
 use crate::AppState;
+
+/// 세마포어 대기 최대 시간 (500분 = 30,000,000ms)
+const SEMAPHORE_TIMEOUT_MS: u64 = 30_000_000;
 
 /// 인증 관련 헤더인지 확인
 fn is_auth_header(name: &str) -> bool {
@@ -131,6 +135,38 @@ pub async fn proxy_handler(
         Some(pair) => pair,
         None => {
             return forward(&state, &parts, bytes, None, None).await;
+        }
+    };
+
+    // 계정 세마포어 획득 (타임아웃 적용)
+    let account_permit = match tokio::time::timeout(
+        Duration::from_millis(SEMAPHORE_TIMEOUT_MS),
+        state.account_semaphore.acquire(route_idx),
+    )
+    .await
+    {
+        Ok(Some(permit)) => {
+            tracing::info!(route_idx, "계정 세마포어 획득, 요청 처리 시작");
+            Some(permit)
+        }
+        Ok(None) => {
+            tracing::debug!(route_idx, "계정 세마포어 제한 없음");
+            None
+        }
+        Err(_) => {
+            tracing::error!(
+                route_idx,
+                timeout_mins = 500,
+                "계정 세마포어 대기 타임아웃"
+            );
+
+            if route.fallback.is_enabled() {
+                tracing::warn!("타임아웃 발생, Anthropic API로 폴백");
+                let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                return forward(&state, &parts, fallback_bytes, None, None).await;
+            }
+
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
         }
     };
 
