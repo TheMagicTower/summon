@@ -78,6 +78,29 @@ src/
 - `routes[].concurrency`: 키당 동시 요청 제한
 - `routes[].fallback`: `false` / `true` / `"모델명"` (폴백 동작 설정)
 
+### 계정 단위 동시성 제한 (v0.3)
+
+BigModel 등 일부 제공자는 API 키별이 아닌 계정 전체의 동시 요청 수를 제한합니다.
+이 경우 `account_concurrency`를 설정하여 프록시에서 요청을 순차 처리할 수 있습니다.
+
+```yaml
+routes:
+  - match: "glm-5"
+    account_concurrency: 1  # 계정 전체 동시 1개만
+    concurrency: 1          # 키당 동시 1개만 (선택적)
+    upstream:
+      url: "https://open.bigmodel.cn/api/anthropic"
+      auth:
+        header: "x-api-key"
+        value: "${GLM_KEY}"
+```
+
+**설정 설명:**
+- `account_concurrency`: 계정 전체 동시 요청 수 제한 (선택적)
+- 미설정 시 무제한
+- 한도 초과 시 최대 500분까지 대기 후 타임아웃
+- `concurrency`(키별 제한)와 독립적으로 동작
+
 ## 개발 규칙
 
 - 모든 문서, 주석, 커밋 메시지는 한국어로 작성
