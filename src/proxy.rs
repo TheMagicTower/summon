@@ -163,6 +163,7 @@ pub async fn proxy_handler(
             if route.fallback.is_enabled() {
                 tracing::warn!("타임아웃 발생, Anthropic API로 폴백");
                 let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                // 폴백은 Anthropic API로 가므로 permit 없이 전달
                 return forward(&state, &parts, fallback_bytes, None, None).await;
             }
 
@@ -209,7 +210,9 @@ pub async fn proxy_handler(
                             );
                             drop(guard);
                             let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                            return forward(&state, &parts, fallback_bytes, None, None).await;
+                            let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                            // 폴백은 Anthropic API이므로 account_permit만 전달 (guard는 이미 drop)
+                            return Ok(attach_permits(resp, account_permit, None));
                         }
                         Ok(resp) => {
                             return Ok(attach_permits(resp, account_permit, Some(guard)));
@@ -218,7 +221,9 @@ pub async fn proxy_handler(
                             tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
                             drop(guard);
                             let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                            return forward(&state, &parts, fallback_bytes, None, None).await;
+                            let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                            // 폴백은 Anthropic API이므로 account_permit만 전달 (guard는 이미 drop)
+                            return Ok(attach_permits(resp, account_permit, None));
                         }
                         Err(e) => {
                             return Err(e);
@@ -235,7 +240,9 @@ pub async fn proxy_handler(
                     if route.fallback.is_enabled() {
                         tracing::info!("Anthropic API로 폴백");
                         let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                        return forward(&state, &parts, fallback_bytes, None, None).await;
+                        let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                        // 폴백은 Anthropic API이므로 account_permit만 전달
+                        return Ok(attach_permits(resp, account_permit, None));
                     } else {
                         return Err(StatusCode::TOO_MANY_REQUESTS);
                     }
@@ -257,12 +264,16 @@ pub async fn proxy_handler(
                         "외부 제공자 비성공 응답, Anthropic API로 폴백"
                     );
                     let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                    forward(&state, &parts, fallback_bytes, None, None).await
+                    let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                    // 폴백은 Anthropic API이므로 account_permit만 전달
+                    Ok(attach_permits(resp, account_permit, None))
                 }
                 Err(_) => {
                     tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
                     let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                    forward(&state, &parts, fallback_bytes, None, None).await
+                    let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                    // 폴백은 Anthropic API이므로 account_permit만 전달
+                    Ok(attach_permits(resp, account_permit, None))
                 }
             }
         }
