@@ -7,11 +7,15 @@ use http_body_util::{BodyExt, Full};
 use uuid::Uuid;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::config::RouteConfig;
-use crate::pool::PoolGuard;
+use crate::pool::{PoolGuard, SemaphoreGuard};
 use crate::transformer::{self, StreamContext, Transformer};
 use crate::AppState;
+
+/// 세마포어 대기 최대 시간 (500분 = 30,000,000ms)
+const SEMAPHORE_TIMEOUT_MS: u64 = 30_000_000;
 
 /// 인증 관련 헤더인지 확인
 fn is_auth_header(name: &str) -> bool {
@@ -134,6 +138,39 @@ pub async fn proxy_handler(
         }
     };
 
+    // 계정 세마포어 획득 (타임아웃 적용)
+    let account_permit = match tokio::time::timeout(
+        Duration::from_millis(SEMAPHORE_TIMEOUT_MS),
+        state.account_semaphore.acquire(route_idx),
+    )
+    .await
+    {
+        Ok(Some(permit)) => {
+            tracing::info!(route_idx, "계정 세마포어 획득, 요청 처리 시작");
+            Some(permit)
+        }
+        Ok(None) => {
+            tracing::debug!(route_idx, "계정 세마포어 제한 없음");
+            None
+        }
+        Err(_) => {
+            tracing::error!(
+                route_idx,
+                timeout_mins = 500,
+                "계정 세마포어 대기 타임아웃"
+            );
+
+            if route.fallback.is_enabled() {
+                tracing::warn!("타임아웃 발생, Anthropic API로 폴백");
+                let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
+                // 폴백은 Anthropic API로 가므로 permit 없이 전달
+                return forward(&state, &parts, fallback_bytes, None, None).await;
+            }
+
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
+        }
+    };
+
     // 키 풀이 있는 라우트: 429 시 다른 키로 재시도하는 루프
     if route.upstream.auth.has_pool() {
         let mut tried_keys: Vec<usize> = Vec::new();
@@ -164,7 +201,7 @@ pub async fn proxy_handler(
                             continue;
                         }
                         Ok(resp) if resp.status().is_success() => {
-                            return Ok(attach_guard(resp, Some(guard)));
+                            return Ok(attach_permits(resp, account_permit, Some(guard)));
                         }
                         Ok(resp) if route.fallback.is_enabled() => {
                             tracing::warn!(
@@ -173,16 +210,20 @@ pub async fn proxy_handler(
                             );
                             drop(guard);
                             let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                            return forward(&state, &parts, fallback_bytes, None, None).await;
+                            let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                            // 폴백은 Anthropic API이므로 account_permit만 전달 (guard는 이미 drop)
+                            return Ok(attach_permits(resp, account_permit, None));
                         }
                         Ok(resp) => {
-                            return Ok(attach_guard(resp, Some(guard)));
+                            return Ok(attach_permits(resp, account_permit, Some(guard)));
                         }
                         Err(_) if route.fallback.is_enabled() => {
                             tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
                             drop(guard);
                             let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                            return forward(&state, &parts, fallback_bytes, None, None).await;
+                            let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                            // 폴백은 Anthropic API이므로 account_permit만 전달 (guard는 이미 drop)
+                            return Ok(attach_permits(resp, account_permit, None));
                         }
                         Err(e) => {
                             return Err(e);
@@ -199,7 +240,9 @@ pub async fn proxy_handler(
                     if route.fallback.is_enabled() {
                         tracing::info!("Anthropic API로 폴백");
                         let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                        return forward(&state, &parts, fallback_bytes, None, None).await;
+                        let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                        // 폴백은 Anthropic API이므로 account_permit만 전달
+                        return Ok(attach_permits(resp, account_permit, None));
                     } else {
                         return Err(StatusCode::TOO_MANY_REQUESTS);
                     }
@@ -212,43 +255,58 @@ pub async fn proxy_handler(
     match route.fallback.is_enabled() {
         true => {
             match forward(&state, &parts, bytes.clone(), Some(route), None).await {
-                Ok(resp) if resp.status().is_success() => Ok(resp),
+                Ok(resp) if resp.status().is_success() => {
+                    Ok(attach_permits(resp, account_permit, None))
+                }
                 Ok(resp) => {
                     tracing::warn!(
                         status = %resp.status(),
                         "외부 제공자 비성공 응답, Anthropic API로 폴백"
                     );
                     let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                    forward(&state, &parts, fallback_bytes, None, None).await
+                    let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                    // 폴백은 Anthropic API이므로 account_permit만 전달
+                    Ok(attach_permits(resp, account_permit, None))
                 }
                 Err(_) => {
                     tracing::warn!("외부 제공자 연결 실패, Anthropic API로 폴백");
                     let fallback_bytes = apply_fallback_model(&bytes, &route.fallback)?;
-                    forward(&state, &parts, fallback_bytes, None, None).await
+                    let resp = forward(&state, &parts, fallback_bytes, None, None).await?;
+                    // 폴백은 Anthropic API이므로 account_permit만 전달
+                    Ok(attach_permits(resp, account_permit, None))
                 }
             }
         }
         false => {
-            forward(&state, &parts, bytes, Some(route), None).await
+            let resp = forward(&state, &parts, bytes, Some(route), None).await?;
+            Ok(attach_permits(resp, account_permit, None))
         }
     }
 }
 
-/// 응답 Body에 PoolGuard를 부착하여 스트림 종료 시 자동 해제
-fn attach_guard(resp: Response<Body>, guard: Option<PoolGuard>) -> Response<Body> {
-    match guard {
-        None => resp,
-        Some(guard) => {
-            let (parts, body) = resp.into_parts();
-            let guarded = wrap_body_with_guard(body, guard);
-            Response::from_parts(parts, guarded)
-        }
+/// 응답 Body에 PoolGuard와 SemaphoreGuard를 부착하여 스트림 종료 시 자동 해제
+fn attach_permits(
+    resp: Response<Body>,
+    account_permit: Option<SemaphoreGuard>,
+    guard: Option<PoolGuard>,
+) -> Response<Body> {
+    if account_permit.is_none() && guard.is_none() {
+        return resp;
     }
+
+    let (parts, body) = resp.into_parts();
+    let guarded = wrap_body_with_permits(body, account_permit, guard);
+    Response::from_parts(parts, guarded)
 }
 
-/// Body를 PoolGuard와 함께 감싸서 스트림 종료 시 가드 해제
-fn wrap_body_with_guard(body: Body, guard: PoolGuard) -> Body {
+/// Body를 permit들과 함께 감싸서 스트림 종료 시 자동 해제
+fn wrap_body_with_permits(
+    body: Body,
+    account_permit: Option<SemaphoreGuard>,
+    guard: Option<PoolGuard>,
+) -> Body {
     let stream = async_stream::stream! {
+        let _account_permit = account_permit;
         let _guard = guard;
         let mut body = body;
         loop {
@@ -265,6 +323,7 @@ fn wrap_body_with_guard(body: Body, guard: PoolGuard) -> Body {
                 None => break,
             }
         }
+        tracing::debug!("스트림 종료, permit들 자동 해제");
     };
     Body::from_stream(stream)
 }

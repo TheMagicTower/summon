@@ -2,11 +2,72 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::Semaphore;
 
 use crate::config::Config;
 
 /// 기본 쿨다운 시간 (Retry-After 헤더가 없을 때)
 const DEFAULT_COOLDOWN_SECS: u64 = 60;
+
+/// 라우트별 계정 단위 동시성 제어
+pub struct AccountSemaphore {
+    /// 라우트별 세마포어 (None = 제한 없음)
+    semaphores: Vec<Option<Arc<Semaphore>>>,
+}
+
+/// 세마포어 자동 해제 가드
+pub struct SemaphoreGuard {
+    _permit: tokio::sync::OwnedSemaphorePermit,
+}
+
+impl SemaphoreGuard {
+    pub fn new(permit: tokio::sync::OwnedSemaphorePermit) -> Self {
+        SemaphoreGuard { _permit: permit }
+    }
+}
+
+impl AccountSemaphore {
+    /// Config로부터 AccountSemaphore 생성
+    pub fn from_config(config: &Config) -> Self {
+        let semaphores = config
+            .routes
+            .iter()
+            .map(|route| {
+                route
+                    .account_concurrency
+                    .map(|limit| Arc::new(Semaphore::new(limit)))
+            })
+            .collect();
+
+        AccountSemaphore { semaphores }
+    }
+
+    /// 세마포어 획득 (비동기 대기)
+    ///
+    /// # 반환값
+    /// - `Some(permit)`: account_concurrency가 설정되어 있고 획득 성공
+    /// - `None`: account_concurrency가 설정되지 않음 (무제한)
+    ///
+    /// # 주의
+    /// route_idx가 범위를 벗어나거나 세마포어 획득 실패 시에도 None 반환
+    pub async fn acquire(
+        &self,
+        route_idx: usize,
+    ) -> Option<SemaphoreGuard> {
+        match self.semaphores.get(route_idx)? {
+            Some(sem) => {
+                let permit = sem.clone().acquire_owned().await.ok()?;
+                tracing::info!(
+                    route_idx,
+                    available_permits = sem.available_permits(),
+                    "계정 세마포어 획득"
+                );
+                Some(SemaphoreGuard::new(permit))
+            }
+            None => None, // 제한 없음
+        }
+    }
+}
 
 /// 라우트별 API 키 풀 — Least-Connections 방식 분배 + 세션 친화
 ///
@@ -292,6 +353,7 @@ mod tests {
                     model_map: None,
                     fallback: Fallback::Passthrough,
                     concurrency: Some(1),
+                    account_concurrency: None,
                 },
                 // 라우트 1: 풀 없음
                 RouteConfig {
@@ -313,6 +375,7 @@ mod tests {
                     model_map: None,
                     fallback: Fallback::Passthrough,
                     concurrency: None,
+                    account_concurrency: None,
                 },
             ],
         }
@@ -564,5 +627,104 @@ mod tests {
         let k2 = pool.acquire_sticky(0, session).unwrap();
         assert_ne!(k1, k2, "쿨다운 중인 키 대신 다른 키가 할당되어야 함");
         pool.release(0, k2);
+    }
+
+    #[tokio::test]
+    async fn test_account_semaphore_basic() {
+        let config = Config {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 18081,
+            },
+            default: DefaultConfig {
+                url: "https://api.anthropic.com".into(),
+            },
+            routes: vec![RouteConfig {
+                match_pattern: "test".into(),
+                upstream: UpstreamConfig {
+                    url: "https://test.com".into(),
+                    auth: AuthConfig {
+                        auth_type: "api_key".into(),
+                        header: Some("x-api-key".into()),
+                        value: Some("key1".into()),
+                        client_id: None,
+                        client_secret: None,
+                        refresh_token: None,
+                        token_url: None,
+                        pool: None,
+                    },
+                },
+                transformer: None,
+                model_map: None,
+                fallback: Fallback::Passthrough,
+                concurrency: None,
+                account_concurrency: Some(2), // 동시 2개 제한
+            }],
+        };
+
+        let sem = AccountSemaphore::from_config(&config);
+
+        // 2개 동시 획득 가능
+        let permit1 = sem.acquire(0).await;
+        assert!(permit1.is_some());
+
+        let permit2 = sem.acquire(0).await;
+        assert!(permit2.is_some());
+
+        // 3번째는 대기 (타임아웃으로 확인)
+        let result = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            sem.acquire(0),
+        )
+        .await;
+        assert!(result.is_err(), "3번째 acquire는 타임아웃되어야 함");
+
+        // permit1 해제 후 3번째 획득 가능
+        drop(permit1);
+        let permit3 = sem.acquire(0).await;
+        assert!(permit3.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_account_semaphore_no_limit() {
+        let config = Config {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 18081,
+            },
+            default: DefaultConfig {
+                url: "https://api.anthropic.com".into(),
+            },
+            routes: vec![RouteConfig {
+                match_pattern: "test".into(),
+                upstream: UpstreamConfig {
+                    url: "https://test.com".into(),
+                    auth: AuthConfig {
+                        auth_type: "api_key".into(),
+                        header: Some("x-api-key".into()),
+                        value: Some("key1".into()),
+                        client_id: None,
+                        client_secret: None,
+                        refresh_token: None,
+                        token_url: None,
+                        pool: None,
+                    },
+                },
+                transformer: None,
+                model_map: None,
+                fallback: Fallback::Passthrough,
+                concurrency: None,
+                account_concurrency: None, // 제한 없음
+            }],
+        };
+
+        let sem = AccountSemaphore::from_config(&config);
+
+        // 무제한 획득 가능 (None 반환)
+        let p1 = sem.acquire(0).await;
+        assert!(p1.is_none(), "제한 없으면 None 반환");
+
+        let p2 = sem.acquire(0).await;
+        assert!(p2.is_none());
     }
 }

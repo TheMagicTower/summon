@@ -170,6 +170,10 @@ pub struct RouteConfig {
     /// 예: GLM-5는 키당 1개, GLM-4-Plus는 키당 20개
     #[serde(skip_serializing_if = "Option::is_none")]
     pub concurrency: Option<usize>,
+    /// 계정 단위 동시 요청 제한 (기본값: 제한 없음)
+    /// 모든 API 키에 걸쳐 계정 전체의 동시 요청 수를 제한
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_concurrency: Option<usize>,
 }
 
 /// 최상위 설정
@@ -470,6 +474,7 @@ routes:
                     model_map: None,
                     fallback: Fallback::Passthrough,
                     concurrency: None,
+                    account_concurrency: None,
                 },
                 RouteConfig {
                     match_pattern: "kimi".into(),
@@ -490,6 +495,7 @@ routes:
                     model_map: None,
                     fallback: Fallback::Passthrough,
                     concurrency: None,
+                    account_concurrency: None,
                 },
             ],
         };
@@ -527,6 +533,7 @@ routes:
                 model_map: None,
                 fallback: Fallback::Passthrough,
                 concurrency: None,
+                account_concurrency: None,
             }],
         }
     }
