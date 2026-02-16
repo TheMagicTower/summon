@@ -4,6 +4,7 @@ export function Changelog() {
   const { t } = useTranslation();
 
   const versions = [
+    { version: "0.3.0", date: "2026-02-16" },
     { version: "0.2.8", date: "2026-02-14" },
     { version: "0.2.7", date: "2026-02-13" },
     { version: "0.2.6", date: "2026-02-12" },

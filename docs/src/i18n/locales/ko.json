@@ -294,6 +294,7 @@
     "title": "변경사항",
     "description": "릴리즈 이력과 기능 업데이트.",
     "versions": {
+      "v0_3_0": "추가\n• 계정 단위 동시성 제한 (account_concurrency)\n• AccountSemaphore 구조체 구현 (tokio::Semaphore 기반)\n• SemaphoreGuard 패턴으로 생명주기 자동 관리\n• 세마포어 획득 타임아웃 (500분)\n• 모든 응답 경로에 permit 적용 (스트리밍 포함)\n• 타임아웃 시 자동 폴백 연계\n• BigModel 등 계정 단위 속도 제한 제공자에 대한 429 에러 사전 차단\n• 여러 Claude Code 동시 실행 시 안정성 확보",
       "v0_2_8": "추가\n• 429(TOO_MANY_REQUESTS) 응답 시 API 키 쿨다운 적용\n• Retry-After 헤더 파싱으로 쿨다운 시간 결정\n• 헤더 없을 시 기본 60초 쿨다운 적용\n• acquire 시 쿨다운 키 자동 건너뜀\n• 쿨다운 이벤트 WARN 레벨 로깅",
       "v0_2_7": "추가\n• 폴백 시 모델명 지정 지원\n\n수정\n• 사소한 버그 수정 및 안정성 개선",
       "v0_2_6": "추가\n• 대화형 CLI 메뉴 (summon configure)\n• 자체 업데이트 명령 (summon update)\n• 다국어 README 지원",

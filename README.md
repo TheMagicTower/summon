@@ -185,6 +185,10 @@ routes:
 - `${ENV_VAR}`: Environment variable reference (API keys are not written directly in the configuration file)
 - `upstream.auth.pool`: Additional API key values for load distribution (same header as `auth.header`)
 - `concurrency`: Per-key concurrent request limit (when exceeded, falls back to Anthropic or returns 429)
+- `account_concurrency`: Account-wide concurrent request limit (all keys in the route combined, optional)
+  - When set, requests exceeding this limit wait up to 500 minutes before timing out
+  - Use for providers with account-level rate limiting (e.g., BigModel API)
+  - Independent from per-key `concurrency` limit
 - `fallback`: Fallback behavior on provider failure (default: `true`)
   - `false`: No fallback, return error as-is
   - `true`: Fall back to Anthropic API with original model name
@@ -199,6 +203,7 @@ Some providers limit concurrent requests per API key (e.g., GLM-5 allows only 1 
 routes:
   - match: "glm-5"
     concurrency: 1           # per-key concurrent request limit
+    account_concurrency: 1   # account-wide concurrent request limit (optional)
     upstream:
       url: "https://open.bigmodel.cn/api/paas/v4"
       auth:
@@ -531,6 +536,7 @@ journalctl -u summon -f
 - **SSE Streaming**: Real-time passthrough in chunks
 - **Concurrent Subscription Auth**: Anthropic OAuth tokens remain intact, only external providers use API keys
 - **API Key Pool**: Multiple API keys per route with Least-Connections distribution for providers with per-key concurrency limits
+- **Account Concurrency Limiting**: Control account-wide concurrent requests to prevent 429 errors from providers with account-level rate limits
 - **Fallback Model Name**: Specify a compatible Anthropic model name for safe fallback when using non-Anthropic model names
 - **Security**: Binds only to `127.0.0.1`, API keys referenced from environment variables
 
@@ -551,9 +557,10 @@ This is a system architecture limitation that cannot be resolved:
 
 ## Roadmap
 
-- **v0.1**: Passthrough + model-based routing + SSE streaming
-- **v0.2** (current): Transformer, API key pool, fallback model name, interactive CLI, self-update
-- **v0.3**: Logging, health check, hot reload, timeout
+- **v0.1**: Passthrough + model-based routing + SSE streaming ✅
+- **v0.2**: Transformer, API key pool, fallback model name, interactive CLI, self-update ✅
+- **v0.3** (current): Account concurrency limiting ✅
+- **v0.4**: Enhanced logging, health check, hot reload, timeout
 
 ## License
 

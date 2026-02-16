@@ -294,6 +294,7 @@
     "title": "Changelog",
     "description": "Release history and feature updates.",
     "versions": {
+      "v0_3_0": "Added\n• Account-level concurrency limiting (account_concurrency)\n• AccountSemaphore implementation (tokio::Semaphore-based)\n• SemaphoreGuard pattern for automatic lifecycle management\n• Semaphore acquisition timeout (500 minutes)\n• Permit attachment across all response paths (including streaming)\n• Automatic fallback on timeout\n• Proactive 429 error prevention for account-level rate limited providers (e.g., BigModel)\n• Stability improvements for concurrent Claude Code instances",
       "v0_2_8": "Added\n• 429 (TOO_MANY_REQUESTS) response handling with API key cooldown\n• Retry-After header parsing for cooldown duration\n• Default 60-second cooldown when header is absent\n• Automatic skip of cooldown keys during acquire\n• WARN-level logging for cooldown events",
       "v0_2_7": "Added\n• Fallback model name specification support\n\nFixed\n• Minor bug fixes and stability improvements",
       "v0_2_6": "Added\n• Interactive CLI menu (summon configure)\n• Self-update command (summon update)\n• Multi-language README support",

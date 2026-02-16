@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.3.0] - 2026-02-16
+
+### 추가
+- 계정 단위 동시성 제한 (Account-Level Concurrency Limiting)
+  - `account_concurrency` 설정 필드 추가 (라우트별)
+  - `AccountSemaphore` 구조체 구현 (tokio::Semaphore 기반)
+  - `SemaphoreGuard` 패턴으로 생명주기 자동 관리
+  - 세마포어 획득 타임아웃 (500분)
+  - 모든 응답 경로에 permit 적용 (스트리밍 포함)
+  - 타임아웃 시 자동 폴백 연계
+- BigModel 등 계정 단위 속도 제한 제공자에 대한 429 에러 사전 차단
+- 여러 Claude Code 동시 실행 시 안정성 확보
+
 ## [v0.2.8] - 2026-02-14
 
 ### 추가
